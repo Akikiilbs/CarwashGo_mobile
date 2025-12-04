@@ -1,190 +1,153 @@
 import 'package:flutter/material.dart';
-import 'verify_email_page.dart';
 
-class SignUpMitraPage extends StatefulWidget {
-  const SignUpMitraPage({super.key});
+class SignupMitraPage extends StatefulWidget {
+  const SignupMitraPage({super.key});
 
   @override
-  State<SignUpMitraPage> createState() => _SignUpMitraPageState();
+  State<SignupMitraPage> createState() => _SignupMitraPageState();
 }
 
-class _SignUpMitraPageState extends State<SignUpMitraPage> {
-  final _formKey = GlobalKey<FormState>();
+class _SignupMitraPageState extends State<SignupMitraPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
-
   bool _isObscure = true;
-  bool _isObscureConfirm = true;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _register() {
+    if (_nameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Harap lengkapi semua kolom")),
+      );
+      return;
+    }
+
+    // TODO: implement actual registration backend
+    // For now simulate success:
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Akun dibuat"),
+        content: const Text("Akun mitra berhasil dibuat. Silakan login."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK"),
+          )
+        ],
+      ),
+    ).then((_) {
+      // Setelah menutup dialog, menuju ke login (replacement agar tidak menumpuk)
+      Navigator.pushReplacementNamed(context, '/login-mitra');
+      // Optional: show a SnackBar at login page stating success (you can pass args if needed)
+    });
+  }
+
+  void _goBackToLogin() {
+    Navigator.pushReplacementNamed(context, '/login-mitra');
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        title: const Text(
-          "Daftar Mitra",
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: const Text("Daftar Mitra"),
+        backgroundColor: Colors.blueAccent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: _goBackToLogin,
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-
-                const Text(
-                  "Buat Akun Mitra",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                  ),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: "Nama Usaha / Pemilik",
+                  prefixIcon: const Icon(Icons.person),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-
-                const SizedBox(height: 30),
-
-                // ==== NAMA ====
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: "Nama Mitra",
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value!.isEmpty ? "Masukkan nama mitra" : null,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: "Email",
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                const SizedBox(height: 20),
-
-                // ==== EMAIL ====
-                TextFormField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: "Alamat Email",
-                    prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value!.isEmpty ? "Masukkan email anda" : null,
+                keyboardType: TextInputType.emailAddress,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _phoneController,
+                decoration: InputDecoration(
+                  labelText: "Nomor HP",
+                  prefixIcon: const Icon(Icons.phone),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                const SizedBox(height: 20),
-
-                // ==== PASSWORD ====
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _isObscure,
-                  decoration: InputDecoration(
-                    labelText: "Kata Sandi",
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                          _isObscure ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () {
-                        setState(() {
-                          _isObscure = !_isObscure;
-                        });
-                      },
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _passwordController,
+                obscureText: _isObscure,
+                decoration: InputDecoration(
+                  labelText: "Kata Sandi",
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isObscure ? Icons.visibility_off : Icons.visibility,
                     ),
+                    onPressed: () => setState(() => _isObscure = !_isObscure),
                   ),
-                  validator: (value) =>
-                      value!.length < 6 ? "Minimal 6 karakter" : null,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
                 ),
-                const SizedBox(height: 20),
-
-                // ==== CONFIRM PASSWORD ====
-                TextFormField(
-                  controller: _confirmController,
-                  obscureText: _isObscureConfirm,
-                  decoration: InputDecoration(
-                    labelText: "Konfirmasi Kata Sandi",
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _isObscureConfirm
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _isObscureConfirm = !_isObscureConfirm;
-                        });
-                      },
-                    ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
-                  validator: (value) =>
-                      value != _passwordController.text
-                          ? "Password tidak sama"
-                          : null,
-                ),
-                const SizedBox(height: 30),
-
-                // ==== BUTTON DAFTAR ====
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => VerifyEmailPage(
-                              email: _emailController.text,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text(
-                      "Daftar Mitra",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  child: const Text(
+                    "DAFTAR",
+                    style: TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                // ==== SUDAH PUNYA AKUN ====
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Sudah punya akun? "),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushReplacementNamed(
-                            context, "/login-mitra");
-                      },
-                      child: const Text(
-                        "Masuk",
-                        style: TextStyle(
-                          color: Colors.blueAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 12),
+              TextButton(
+                onPressed: _goBackToLogin,
+                child: const Text("Sudah punya akun? Login"),
+              ),
+            ],
           ),
         ),
       ),

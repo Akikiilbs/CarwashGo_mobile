@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 // =====================
-// SPLASH & ONBOARDING
+// SPLASH & ONBOARDING (pastikan file ada di project)
 // =====================
 import '../pages/onboarding/splash_page.dart';
 import '../pages/onboarding/onboarding_page.dart';
@@ -37,7 +37,7 @@ import '../pages/notification/notification_page.dart';
 import '../pages/menu/menu_page.dart';
 
 // =====================
-// MITRA PAGES
+// HOME MITRA
 // =====================
 import '../pages/mitra/home_mitra_page.dart';
 import '../pages/mitra/mitra_orders_page.dart';
@@ -81,7 +81,7 @@ class AppRoutes {
     // MITRA AUTH
     // =====================
     '/login-mitra': (_) => const LoginMitraPage(),
-    '/signup-mitra': (_) => const SignUpMitraPage(),
+    '/signup-mitra': (_) => const SignupMitraPage(),
     '/forgot-password-mitra': (_) => const ForgotPasswordMitraPage(),
 
     '/verify-email-mitra': (context) {
@@ -108,9 +108,6 @@ class AppRoutes {
     '/mitra-orders': (_) => const MitraOrdersPage(),
     '/mitra-profile': (_) => const MitraProfilePage(),
 
-    // =====================
-    // MITRA NEW PAGES
-    // =====================
     '/mitra-income': (_) => const MitraIncomePage(),
     '/mitra-cars': (_) => const MitraCarsPage(),
     '/mitra-rating': (_) => const MitraRatingPage(),
@@ -119,7 +116,8 @@ class AppRoutes {
     // QRIS PAYMENT
     // =====================
     '/qris': (context) {
-      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      final args =
+          ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
       return QRISPage(
         username: args["username"],
