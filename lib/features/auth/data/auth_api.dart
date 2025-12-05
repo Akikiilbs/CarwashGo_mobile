@@ -72,9 +72,10 @@ class AuthApi {
 
       final authResponse = AuthResponse.fromJson(response.data);
 
-      if (authResponse.isSuccess && authResponse.token != null) {
-        await _storage.write(key: 'auth_token', value: authResponse.token);
-      }
+      // Optional: simpan token ke storage
+      // if (authResponse.isSuccess && authResponse.token != null) {
+      //   await _storage.write(key: 'auth_token', value: authResponse.token);
+      // }
 
       return authResponse;
     } on DioException catch (e) {
@@ -125,50 +126,11 @@ class AuthApi {
     return true;
   }
 
-  /// POST /auth/verify-otp
-  Future<AuthResponse> verifyOtp({
-    required String email,
-    required String otp,
-  }) async {
+  // Kirim OTP reset password
+  Future<AuthResponse> sendResetOtp({required String email}) async {
     try {
       final response = await _dio.post(
-        '/auth/verify-otp',
-        data: {
-          'email': email,
-          'otp': otp,
-        },
-      );
-
-      final authResponse = AuthResponse.fromJson(response.data);
-
-      // kalau sukses dan ada token → simpan
-      if (authResponse.isSuccess && authResponse.token != null) {
-        await _storage.write(key: 'auth_token', value: authResponse.token);
-      }
-
-      return authResponse;
-    } on DioException catch (e) {
-      if (e.response != null && e.response?.data is Map<String, dynamic>) {
-        return AuthResponse.fromJson(e.response!.data);
-      }
-
-      return AuthResponse(
-        status: 'error',
-        message: 'Terjadi kesalahan jaringan',
-      );
-    } catch (_) {
-      return AuthResponse(
-        status: 'error',
-        message: 'Terjadi kesalahan tak terduga',
-      );
-    }
-  }
-
-  /// POST /auth/resend-otp
-  Future<AuthResponse> resendOtp({required String email}) async {
-    try {
-      final response = await _dio.post(
-        '/auth/resend-otp',
+        '/auth/password/send-otp', // endpoint forgot password
         data: {'email': email},
       );
 
@@ -177,7 +139,6 @@ class AuthApi {
       if (e.response != null && e.response?.data is Map<String, dynamic>) {
         return AuthResponse.fromJson(e.response!.data);
       }
-
       return AuthResponse(
         status: 'error',
         message: 'Terjadi kesalahan jaringan',
@@ -189,5 +150,69 @@ class AuthApi {
       );
     }
   }
-  
+
+// Verifikasi OTP reset password
+  Future<AuthResponse> verifyResetOtp({
+    required String email,
+    required String otp,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/password/verify-otp', // endpoint forgot password
+        data: {
+          'email': email,
+          'otp': otp,
+        },
+      );
+
+      return AuthResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data is Map<String, dynamic>) {
+        return AuthResponse.fromJson(e.response!.data);
+      }
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan jaringan',
+      );
+    } catch (_) {
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan tak terduga',
+      );
+    }
+  }
+  // Reset password dengan OTP
+  Future<AuthResponse> resetPassword({
+    required String email,
+    required String otp,
+    required String password,
+    required String passwordConfirmation,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/password/reset', // sesuaikan dengan route Laravel
+        data: {
+          'email': email,
+          'otp': otp,
+          'password': password,
+          'password_confirmation': passwordConfirmation,
+        },
+      );
+
+      return AuthResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data is Map<String, dynamic>) {
+        return AuthResponse.fromJson(e.response!.data);
+      }
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan jaringan',
+      );
+    } catch (_) {
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan tak terduga',
+      );
+    }
+  }
 }
