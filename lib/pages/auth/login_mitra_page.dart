@@ -13,23 +13,44 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
   bool _isObscure = true;
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _goToRole() {
+    // replace with role so back won't return here
+    Navigator.pushReplacementNamed(context, '/role');
+  }
+
+  void _login() {
+    if (_emailController.text.isNotEmpty &&
+        _passwordController.text.isNotEmpty) {
+      // TODO: real auth
+      Navigator.pushReplacementNamed(context, '/mitra-home');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Harap isi semua kolom")),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
-              // BACK BUTTON
+              // BACK BUTTON → clear and go back to role (replacement)
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.blueAccent),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
+                icon: const Icon(Icons.arrow_back_ios_new,
+                    color: Colors.blueAccent),
+                onPressed: _goToRole,
               ),
 
               const SizedBox(height: 10),
@@ -85,16 +106,17 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                 ),
               ),
               const SizedBox(height: 8),
-
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
                   hintText: "mitra@example.com",
-                  prefixIcon: const Icon(Icons.email_outlined, color: Colors.blueAccent),
+                  prefixIcon:
+                      const Icon(Icons.email_outlined, color: Colors.blueAccent),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
+                keyboardType: TextInputType.emailAddress,
               ),
 
               const SizedBox(height: 20),
@@ -108,13 +130,13 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                 ),
               ),
               const SizedBox(height: 8),
-
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
                 decoration: InputDecoration(
                   hintText: "Masukkan kata sandi anda",
-                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.blueAccent),
+                  prefixIcon:
+                      const Icon(Icons.lock_outline, color: Colors.blueAccent),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isObscure ? Icons.visibility_off : Icons.visibility,
@@ -160,16 +182,7 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () {
-                    if (_emailController.text.isNotEmpty &&
-                        _passwordController.text.isNotEmpty) {
-                      Navigator.pushReplacementNamed(context, '/mitra-home');
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Harap isi semua kolom")),
-                      );
-                    }
-                  },
+                  onPressed: _login,
                   child: const Text(
                     "LOGIN MITRA",
                     style: TextStyle(
@@ -182,14 +195,14 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
 
               const SizedBox(height: 25),
 
-              // REGISTER LINK
+              // REGISTER LINK -> pergi ke signup-mitra (replacement so stack clean)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Text("Belum punya akun? "),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, '/signup-mitra');
+                      Navigator.pushReplacementNamed(context, '/signup-mitra');
                     },
                     child: const Text(
                       "Daftar",

@@ -28,7 +28,6 @@ class MitraProfilePage extends StatelessWidget {
           children: [
             const SizedBox(height: 15),
 
-            // FOTO PROFIL
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.blueAccent.withOpacity(0.3),
@@ -61,6 +60,9 @@ class MitraProfilePage extends StatelessWidget {
             _infoTile(Icons.local_car_wash, "Jenis Layanan", "Cuci Premium"),
             const SizedBox(height: 25),
 
+            // ==========================
+            //        LOGOUT FIX
+            // ==========================
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -71,7 +73,13 @@ class MitraProfilePage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login-mitra',
+                    (route) => false,   // clear history -> FIX MACET
+                  );
+                },
                 child: const Text(
                   "Keluar",
                   style: TextStyle(
