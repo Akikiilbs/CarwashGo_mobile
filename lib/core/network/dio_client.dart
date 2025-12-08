@@ -11,7 +11,7 @@ class DioClient {
   DioClient._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: 'https://4c76a14d09f4.ngrok-free.app/api/v1', // GANTI dengan base URL kamu
+        baseUrl: 'https://4075920feee0.ngrok-free.app/api/v1', // GANTI dengan base URL kamu
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         headers: {

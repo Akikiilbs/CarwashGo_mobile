@@ -168,6 +168,8 @@ class SignupMitraPage extends StatefulWidget {
 
 class _SignupMitraPageState extends State<SignupMitraPage> {
   final _nameController = TextEditingController();
+  final _businessNameController = TextEditingController();
+  final _addressController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -181,6 +183,8 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _businessNameController.dispose();
+    _addressController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -193,11 +197,15 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
 
   Future<void> _register() async {
     final name = _nameController.text.trim();
+    final businessName = _businessNameController.text.trim();
+    final address = _addressController.text.trim();
     final email = _emailController.text.trim();
     final phone = _phoneController.text.trim();
     final password = _passwordController.text;
 
     if (name.isEmpty ||
+        businessName.isEmpty ||
+        address.isEmpty ||
         email.isEmpty ||
         phone.isEmpty ||
         password.isEmpty) {
@@ -220,6 +228,8 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
         email: email,
         phone: phone,
         password: password,
+        businessName: businessName,
+        address: address,
       );
     } finally {
       if (!mounted) return;
@@ -294,15 +304,38 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
                 ),
                 const SizedBox(height: 12),
               ],
-
               const SizedBox(height: 12),
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: "Nama Usaha / Pemilik",
+                  labelText: "Nama Pemilik Usaha",
                   prefixIcon: const Icon(Icons.person),
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _businessNameController,
+                decoration: InputDecoration(
+                  labelText: "Nama Usaha",
+                  prefixIcon: const Icon(Icons.store_mall_directory_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _addressController,
+                maxLines: 2,
+                decoration: InputDecoration(
+                  labelText: "Alamat Usaha",
+                  alignLabelWithHint: true,
+                  prefixIcon: const Icon(Icons.location_on_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
