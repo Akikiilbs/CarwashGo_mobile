@@ -151,6 +151,85 @@ class AuthApi {
     }
   }
 
+    /// POST /auth/login-partner
+  Future<AuthResponse> loginPartner({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/login-partner',
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      final authResponse = AuthResponse.fromJson(response.data);
+
+      // kalau success → simpan token (dipakai untuk API mitra)
+      if (authResponse.isSuccess && authResponse.token != null) {
+        await _storage.write(key: 'auth_token', value: authResponse.token);
+      }
+
+      return authResponse;
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data is Map<String, dynamic>) {
+        return AuthResponse.fromJson(e.response!.data);
+      }
+
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan jaringan',
+      );
+    } catch (_) {
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan tak terduga',
+      );
+    }
+  }
+
+  /// POST /auth/login-partner
+  Future<AuthResponse> loginPartner({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/login-partner',
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      final authResponse = AuthResponse.fromJson(response.data);
+
+      // kalau success → simpan token (dipakai untuk API mitra)
+      if (authResponse.isSuccess && authResponse.token != null) {
+        await _storage.write(key: 'auth_token', value: authResponse.token);
+      }
+
+      return authResponse;
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data is Map<String, dynamic>) {
+        return AuthResponse.fromJson(e.response!.data);
+      }
+
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan jaringan',
+      );
+    } catch (_) {
+      return AuthResponse(
+        status: 'error',
+        message: 'Terjadi kesalahan tak terduga',
+      );
+    }
+  }
+
+
 // Verifikasi OTP reset password
   Future<AuthResponse> verifyResetOtp({
     required String email,
