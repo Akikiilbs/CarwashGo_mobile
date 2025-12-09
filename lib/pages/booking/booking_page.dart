@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../map/map_picker_page.dart';
 import 'detail_service_page.dart';
+import '../../features/order/data/order_api.dart';
+import '../../features/order/models/simple_api_response.dart';
 
 class BookingPage extends StatefulWidget {
   const BookingPage({super.key});
@@ -21,6 +23,11 @@ class _BookingPageState extends State<BookingPage> {
   // Controller baru
   final TextEditingController detailAddressController = TextEditingController();
   final TextEditingController plateNumberController = TextEditingController();
+
+  bool _isLoading = false; // 👈 TAMBAH
+  String? _errorMessage; // 👈 TAMBAH
+
+  final _orderApi = OrderApi(); // 👈 TAMBAH
 
   final List<String> cars = [
     "Small Car (Agya/Brio)",
@@ -63,8 +70,9 @@ class _BookingPageState extends State<BookingPage> {
   int getCarPrice() =>
       selectedCar == null ? 0 : carPrices[cars.indexOf(selectedCar!)];
 
-  int getServicePrice() =>
-      selectedService == null ? 0 : servicePrices[services.indexOf(selectedService!)];
+  int getServicePrice() => selectedService == null
+      ? 0
+      : servicePrices[services.indexOf(selectedService!)];
 
   int getDistancePrice() => (selectedDistance * 2000).round();
 
@@ -96,11 +104,11 @@ class _BookingPageState extends State<BookingPage> {
         ),
         backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -377,19 +385,15 @@ class _BookingPageState extends State<BookingPage> {
             ),
           ),
           const SizedBox(height: 10),
-
           _priceRow("Harga Mobil", getCarPrice()),
           _priceRow("Harga Layanan", getServicePrice()),
           _priceRow(
             "Biaya Jarak (${selectedDistance.toStringAsFixed(1)} km)",
             getDistancePrice(),
           ),
-
           const Divider(),
-
           _priceRow("Total", calculateTotal(), bold: true),
           const SizedBox(height: 10),
-
           Text("Driver ETA: ${estimateDriverArrival()}"),
         ],
       ),
@@ -425,46 +429,140 @@ class _BookingPageState extends State<BookingPage> {
             borderRadius: BorderRadius.circular(14),
           ),
         ),
-        onPressed: () {
-          if (selectedAddress == null ||
-              selectedCar == null ||
-              selectedService == null ||
-              selectedTimeIndex == -1 ||
-              detailAddressController.text.isEmpty ||
-              plateNumberController.text.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Harap lengkapi semua data dulu.")),
-            );
-            return;
-          }
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DetailServicePage(
-                username: "User CarWashGo",
-                phoneNumber: "081234567890",
-                bookingId: DateTime.now().millisecondsSinceEpoch.toString(),
-                date: dates[selectedDateIndex],
-                time: times[selectedTimeIndex],
-                carType: selectedCar!,
-                price: getCarPrice(),
-                servicePrice: getServicePrice(),
-                tax: 5000,
-                discount: 0,
-                address: selectedAddress!,
-                detailAddress: detailAddressController.text,
-                plateNumber: plateNumberController.text,
-                total: calculateTotal(),
+        onPressed:
+            _isLoading ? null : () => _handleBooking(context), // ⬅️ ganti
+        child: _isLoading
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                "Pesan Sekarang",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            ),
-          );
-        },
-        child: const Text(
-          "Pesan Sekarang",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
       ),
     );
+  }
+
+  Future<void> _handleBooking(BuildContext context) async {
+    if (selectedAddress == null ||
+        selectedCar == null ||
+        selectedService == null ||
+        selectedTimeIndex == -1 ||
+        detailAddressController.text.isEmpty ||
+        plateNumberController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Harap lengkapi semua data dulu.")),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    final carType = selectedCar!;
+    final serviceType = selectedService!;
+    final dateLabel = dates[selectedDateIndex];
+    final timeSlot = times[selectedTimeIndex];
+    final mainAddress = selectedAddress!;
+    final detailAddress = detailAddressController.text.trim();
+    final plate = plateNumberController.text.trim();
+    final distanceKm = selectedDistance;
+    final totalPrice = calculateTotal();
+
+    SimpleApiResponse res;
+
+    try {
+      res = await _orderApi.createOrder(
+        carType: carType,
+        serviceType: serviceType,
+        mainAddress: mainAddress,
+        detailAddress: detailAddress,
+        plateNumber: plate,
+        dateLabel: dateLabel,
+        timeSlot: timeSlot,
+        distanceKm: distanceKm,
+        totalPrice: totalPrice,
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+    }
+
+    if (!mounted) return;
+
+    if (res.isSuccess) {
+      // Ambil ID order dari data kalau ada
+      String bookingId =
+          DateTime.now().millisecondsSinceEpoch.toString(); // fallback
+
+      if (res.data is Map<String, dynamic>) {
+        final map = res.data as Map<String, dynamic>;
+        final order = map['order'] ?? map; // tergantung struktur response
+        final id = order['id']?.toString();
+        if (id != null) {
+          bookingId = id;
+        }
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            res.message.isNotEmpty ? res.message : "Booking berhasil dibuat",
+          ),
+        ),
+      );
+
+      // ➜ Lanjut ke halaman detail (sambil bawa bookingId dari server kalau ada)
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetailServicePage(
+            username: "User CarWashGo", // TODO: ambil dari user login
+            phoneNumber: "081234567890", // TODO: ambil dari user login
+            bookingId: bookingId,
+            date: dateLabel,
+            time: timeSlot,
+            carType: carType,
+            price: getCarPrice(),
+            servicePrice: getServicePrice(),
+            tax: 5000,
+            discount: 0,
+            address: mainAddress,
+            detailAddress: detailAddress,
+            plateNumber: plate,
+            total: totalPrice,
+          ),
+        ),
+      );
+    } else {
+      String msg = res.message;
+
+      if (res.errors != null && res.errors!.isNotEmpty) {
+        final firstKey = res.errors!.keys.first;
+        final firstVal = res.errors![firstKey];
+        if (firstVal is List && firstVal.isNotEmpty) {
+          msg = firstVal.first.toString();
+        } else if (firstVal is String) {
+          msg = firstVal;
+        }
+      }
+
+      setState(() {
+        _errorMessage = msg;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    }
   }
 }
