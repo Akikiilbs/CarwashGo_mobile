@@ -74,7 +74,7 @@ class AppRoutes {
 
     '/reset-password': (context) {
       final email = ModalRoute.of(context)!.settings.arguments as String;
-      return ResetPasswordPage(email: email);
+      return ResetPasswordPage(email: email, otp: '');
     },
 
     // =====================

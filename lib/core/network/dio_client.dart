@@ -6,29 +6,46 @@ class DioClient {
   factory DioClient() => _instance;
 
   late final Dio dio;
-  final _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   DioClient._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: 'https://quentin-delayable-jazlynn.ngrok-free.dev/api/v1', // GANTI dengan base URL kamu
+        baseUrl:
+            'https://quentin-delayable-jazlynn.ngrok-free.dev/api/v1',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json',
         },
       ),
     );
 
-    // Interceptor untuk inject Authorization Bearer token
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final token = await _storage.read(key: 'auth_token');
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
+          try {
+            final token = await _storage.read(key: 'auth_token');
+            if (token != null && token.isNotEmpty) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+
+            print('➡️ [${options.method}] ${options.uri}');
+          } catch (e) {
+            print('❌ Token error: $e');
           }
+
           return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          print('✅ [${response.statusCode}] ${response.requestOptions.uri}');
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          print('❌ [${e.response?.statusCode}] ${e.requestOptions.uri}');
+          print('Message: ${e.message}');
+          return handler.next(e);
         },
       ),
     );

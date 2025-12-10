@@ -276,6 +276,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../providers/user_provider.dart';
 import 'package:carwashgo/features/auth/data/auth_api.dart';
 import 'package:carwashgo/features/auth/models/auth_response.dart';
@@ -299,10 +300,10 @@ class _SignUpPageState extends State<SignUpPage> {
   bool _isObscure = true;
   bool _isObscureConfirm = true;
 
-  bool _isLoading = false;
-  String? _errorMessage;
+  bool _isLoading = false;          // <-- status loading
+  String? _errorMessage;            // <-- pesan error
 
-  final AuthApi _authApi = AuthApi();
+  final _authApi = AuthApi();       // <-- pakai AuthApi.register()
 
   @override
   void dispose() {
@@ -348,7 +349,7 @@ class _SignUpPageState extends State<SignUpPage> {
     if (!mounted) return;
 
     if (res.status == 'success') {
-      // simpan ke UserProvider (opsional, sesuai flow kamu)
+      // Simpan ke UserProvider (opsional, biar data user tersimpan di state)
       final userProv = Provider.of<UserProvider>(context, listen: false);
       if (res.user != null) {
         userProv.setUser(
@@ -364,29 +365,24 @@ class _SignUpPageState extends State<SignUpPage> {
         );
       }
 
-      // 🟢 INI BLOK YANG KAMU TANYAKAN:
-      // data email untuk verifikasi
-      final emailArg = email;
-
-      // SnackBar info
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             res.message.isNotEmpty
                 ? res.message
-                : 'Registrasi berhasil. Kode OTP telah dikirim ke email Anda.',
+                : 'Akun berhasil dibuat! Silakan login.',
           ),
         ),
       );
 
-      // arahkan ke halaman OTP
-      Navigator.pushReplacementNamed(
+      // Setelah register → kembali ke halaman login
+      Navigator.pushNamedAndRemoveUntil(
         context,
-        '/otp',
-        arguments: emailArg,
+        '/login',
+        (route) => false,
       );
     } else {
-      // ambil pesan error validasi kalau ada
+      // Ambil pesan error validasi kalau ada
       String msg = res.message;
 
       if (res.errors != null && res.errors!.isNotEmpty) {
@@ -414,6 +410,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
@@ -423,11 +420,13 @@ class _SignUpPageState extends State<SignUpPage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
           child: Form(
             key: _formKey,
+
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -442,7 +441,21 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 30),
+
+                const SizedBox(height: 12),
+
+                if (_errorMessage != null) ...[
+                  Text(
+                    _errorMessage!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                const SizedBox(height: 20),
 
                 // =======================
                 // NAMA LENGKAP
@@ -453,9 +466,8 @@ class _SignUpPageState extends State<SignUpPage> {
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? "Masukkan nama lengkap"
-                      : null,
+                  validator: (value) =>
+                      value == null || value.isEmpty ? "Masukkan nama lengkap" : null,
                 ),
 
                 const SizedBox(height: 20),
@@ -549,9 +561,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _isObscureConfirm
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _isObscureConfirm ? Icons.visibility_off : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -590,8 +600,7 @@ class _SignUpPageState extends State<SignUpPage> {
                             height: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
                         : const Text(
@@ -638,3 +647,4 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 }
+

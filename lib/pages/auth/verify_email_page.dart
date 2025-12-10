@@ -288,7 +288,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     AuthResponse res;
 
     try {
-      res = await _authApi.verifyOtp(
+      // 🔥 pakai OTP khusus reset password
+      res = await _authApi.verifyResetOtp(
         email: widget.email,
         otp: code,
       );
@@ -310,7 +311,10 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => ResetPasswordPage(email: widget.email),
+          builder: (_) => ResetPasswordPage(
+            email: widget.email,
+            otp: code, // kalau reset password butuh OTP lagi
+          ),
         ),
       );
     } else {
@@ -348,7 +352,8 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     AuthResponse res;
 
     try {
-      res = await _authApi.resendOtp(email: widget.email);
+      // 🔥 kirim ulang OTP reset password
+      res = await _authApi.sendResetOtp(email: widget.email);
     } finally {
       if (!mounted) return;
       setState(() {
@@ -408,7 +413,7 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
           children: [
             const SizedBox(height: 20),
             const Text(
-              "Verifikasi Email Anda",
+              "Verifikasi Kode Reset Password",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -537,4 +542,3 @@ class _VerifyEmailPageState extends State<VerifyEmailPage> {
     );
   }
 }
-
