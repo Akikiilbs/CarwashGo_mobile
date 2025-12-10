@@ -9,10 +9,12 @@ environment:
   sdk: ">=3.0.0 <4.0.0"
 
 dependencies:
-  dio: ^5.7.0
-  flutter_secure_storage: ^9.0.0
   flutter:
     sdk: flutter
+
+  # ===== NETWORK & STORAGE =====
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.0.0
 
   # ===== UI & Icons =====
   cupertino_icons: ^1.0.6
@@ -38,6 +40,9 @@ dependencies:
 
   # ===== FILE PICKER =====
   file_picker: ^6.1.1
+
+  # ===== IMAGE PICKER (✅ WAJIB UNTUK UPLOAD FOTO MITRA) =====
+  image_picker: ^1.0.4
 
   # ===== OPEN GOOGLE MAPS =====
   url_launcher: ^6.2.5   # <==== FIX TERPENTING

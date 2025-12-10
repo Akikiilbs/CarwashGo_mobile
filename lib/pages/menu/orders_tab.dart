@@ -1,15 +1,79 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/order_provider.dart';
-import '../booking/detail_service_page.dart';
 
-class OrdersTab extends StatelessWidget {
+import '../../providers/order_provider.dart';
+import '../../providers/review_provider.dart';
+import '../../models/review_model.dart';
+
+import '../booking/detail_service_page.dart';
+import '../review/review_popup.dart';
+
+class OrdersTab extends StatefulWidget {
   const OrdersTab({super.key});
+
+  @override
+  State<OrdersTab> createState() => _OrdersTabState();
+}
+
+class _OrdersTabState extends State<OrdersTab> {
+  bool _popupShown = false;
+
+  // ✅ FLAG LOKAL: MENANDAI ORDER YANG SUDAH DIREVIEW
+  final Set<String> _reviewedOrderIds = {};
 
   @override
   Widget build(BuildContext context) {
     final orderProv = Provider.of<OrderProvider>(context);
     final orders = orderProv.orders;
+
+    // ✅ CEK OTOMATIS: ADA PESANAN SELESAI & BELUM DIREVIEW → MUNCULKAN POPUP
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_popupShown) return;
+
+      try {
+        final selesaiOrder = orders.firstWhere(
+          (o) => o.status == "selesai" &&
+              !_reviewedOrderIds.contains(o.bookingId),
+        );
+
+        _popupShown = true;
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => ReviewPopup(
+            mitraName: selesaiOrder.title,
+          ),
+        ).then((result) {
+          if (result != null) {
+            final int rating = result["rating"];
+            final String review = result["review"];
+
+            // ✅ SIMPAN KE REVIEW PROVIDER (NYAMBUNG KE MITRA)
+            context.read<ReviewProvider>().addReview(
+                  ReviewModel(
+                    orderId: selesaiOrder.bookingId,
+                    username: selesaiOrder.username,
+                    rating: rating,
+                    comment: review,
+                    createdAt: DateTime.now(),
+                  ),
+                );
+
+            // ✅ SET FLAG: ORDER SUDAH DIREVIEW
+            setState(() {
+              _reviewedOrderIds.add(selesaiOrder.bookingId);
+              _popupShown = false; // reset untuk order berikutnya
+            });
+          } else {
+            _popupShown = false;
+          }
+        });
+      } catch (e) {
+        // Tidak ada order selesai yang belum direview
+        _popupShown = false;
+      }
+    });
 
     if (orders.isEmpty) {
       return Center(
@@ -43,7 +107,7 @@ class OrdersTab extends StatelessWidget {
       itemBuilder: (context, index) {
         final order = orders[index];
 
-        // STATUS BADGE COLOR
+        // ✅ STATUS BADGE COLOR
         Color statusColor;
         String statusText;
 
@@ -54,7 +118,9 @@ class OrdersTab extends StatelessWidget {
             break;
           case "selesai":
             statusColor = Colors.green;
-            statusText = "Selesai";
+            statusText = _reviewedOrderIds.contains(order.bookingId)
+                ? "Selesai • Sudah Diulas"
+                : "Selesai";
             break;
           default:
             statusColor = Colors.grey;
@@ -101,7 +167,6 @@ class OrdersTab extends StatelessWidget {
                 ),
               ],
             ),
-
             child: Row(
               children: [
                 ClipRRect(
@@ -142,8 +207,10 @@ class OrdersTab extends StatelessWidget {
                 ),
 
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 4,
+                    horizontal: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(10),

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/mitra_provider.dart';
 
 class SignupMitraPage extends StatefulWidget {
   const SignupMitraPage({super.key});
@@ -12,6 +14,7 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isObscure = true;
 
   @override
@@ -34,13 +37,24 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
       return;
     }
 
-    // TODO: implement actual registration backend
-    // For now simulate success:
+    // ✅ SIMPAN DATA DASAR KE MITRA PROVIDER (TANPA DESKRIPSI)
+    context.read<MitraProvider>().setMitra(
+      nama: _nameController.text,
+      email: _emailController.text,
+      phone: _phoneController.text,
+      alamat: "",
+      jamOperasional: "",
+      deskripsi: "",
+      hariOperasional: "",
+      harga: "", // ✅ FIX ERROR WAJIB ADA
+    );
+
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Akun dibuat"),
-        content: const Text("Akun mitra berhasil dibuat. Silakan login."),
+        title: const Text("Akun Berhasil Dibuat"),
+        content: const Text("Silakan login untuk melengkapi profil mitra."),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -49,9 +63,7 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
         ],
       ),
     ).then((_) {
-      // Setelah menutup dialog, menuju ke login (replacement agar tidak menumpuk)
       Navigator.pushReplacementNamed(context, '/login-mitra');
-      // Optional: show a SnackBar at login page stating success (you can pass args if needed)
     });
   }
 
@@ -76,38 +88,52 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
           child: Column(
             children: [
               const SizedBox(height: 12),
+
+              // ================= NAMA USAHA / PEMILIK =================
               TextField(
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: "Nama Usaha / Pemilik",
-                  prefixIcon: const Icon(Icons.person),
+                  prefixIcon: const Icon(Icons.store),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
+
               const SizedBox(height: 12),
+
+              // ================= EMAIL =================
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
                   labelText: "Email",
                   prefixIcon: const Icon(Icons.email_outlined),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
+
               const SizedBox(height: 12),
+
+              // ================= NOMOR HP =================
               TextField(
                 controller: _phoneController,
                 decoration: InputDecoration(
                   labelText: "Nomor HP",
                   prefixIcon: const Icon(Icons.phone),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 keyboardType: TextInputType.phone,
               ),
+
               const SizedBox(height: 12),
+
+              // ================= PASSWORD =================
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
@@ -121,10 +147,14 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
                     onPressed: () => setState(() => _isObscure = !_isObscure),
                   ),
                   border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
+
               const SizedBox(height: 20),
+
+              // ================= BUTTON DAFTAR =================
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -133,16 +163,21 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: const Text(
                     "DAFTAR",
                     style: TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
+
               const SizedBox(height: 12),
+
               TextButton(
                 onPressed: _goBackToLogin,
                 child: const Text("Sudah punya akun? Login"),

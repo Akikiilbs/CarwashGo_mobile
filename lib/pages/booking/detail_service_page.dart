@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
 import '../payment/payment_page.dart';
+import '../../providers/order_provider.dart';
+import '../../models/order_model.dart';
 
 class DetailServicePage extends StatelessWidget {
   final String username;
@@ -42,6 +46,8 @@ class DetailServicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final orderProvider = context.read<OrderProvider>();
+
     return Scaffold(
       backgroundColor: const Color(0xFFE5F1FF),
       appBar: AppBar(
@@ -108,8 +114,7 @@ class DetailServicePage extends StatelessWidget {
 
               const Divider(),
 
-              _infoRow("Total", "Rp $total",
-                  bold: true, big: true),
+              _infoRow("Total", "Rp $total", bold: true, big: true),
 
               const SizedBox(height: 20),
 
@@ -145,9 +150,40 @@ class DetailServicePage extends StatelessWidget {
                       child: ElevatedButton(
                         onPressed: () {
                           if (fromOrderPage) {
-                            Navigator.pop(context); // balik ke PesananKu
+                            Navigator.pop(context);
                           } else {
-                            // MODE 1: lempar semua data ke PaymentPage
+                            // ================================
+                            // ✅ TAMBAHKAN PESANAN KE MITRA
+                            // ================================
+
+                            final newOrder = Order(
+                              mitraId: "mitra", // ✅ WAJIB: ID MITRA YANG DITUJU
+                              title: username,
+                              date: date,
+                              time: time,
+                              status: "Pesanan Baru",
+                              image: "assets/images/on1.png",
+                              location: address,
+                              detailAddress: detailAddress,
+                              plateNumber: plateNumber,
+                              username: username,
+                              phoneNumber: phoneNumber,
+                              bookingId: bookingId,
+                              carType: carType,
+                              price: price,
+                              servicePrice: servicePrice,
+                              tax: tax,
+                              discount: discount,
+                              total: total,
+                            );
+
+
+                            orderProvider.addOrder(newOrder);
+
+                            // ================================
+                            // ✅ LANJUT KE PAYMENT (TETAP)
+                            // ================================
+
                             final bookingData = {
                               "username": username,
                               "phoneNumber": phoneNumber,

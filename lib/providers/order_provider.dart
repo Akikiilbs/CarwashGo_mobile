@@ -1,3 +1,5 @@
+// lib/providers/order_provider.dart
+
 import 'package:flutter/material.dart';
 import '../models/order_model.dart';
 
@@ -6,44 +8,48 @@ class OrderProvider extends ChangeNotifier {
 
   List<Order> get orders => _orders;
 
-  /// Tambah pesanan baru
+  // ✅ TAMBAH PESANAN BARU (DARI USER)
   void addOrder(Order order) {
     _orders.add(order);
     notifyListeners();
   }
 
-  /// Hapus semua pesanan
-  void clearOrders() {
-    _orders.clear();
-    notifyListeners();
+  // ✅ AMBIL PESANAN BERDASARKAN MITRA (AMAN WALAUPUN mitraId NULL)
+  List<Order> getOrdersByMitra(String mitraId) {
+    return _orders.where((o) => o.mitraId == mitraId).toList();
   }
 
-  /// Update status pesanan (copy semua field biar data tidak hilang)
-  void updateOrderStatus(int index, String newStatus) {
-    if (index >= 0 && index < _orders.length) {
+  // ✅ UPDATE STATUS PESANAN BERDASARKAN bookingId (LEBIH AMAN DARI INDEX)
+  void updateOrderStatusByBookingId(String bookingId, String newStatus) {
+    final index = _orders.indexWhere((o) => o.bookingId == bookingId);
+
+    if (index != -1) {
       final old = _orders[index];
 
-      _orders[index] = Order(
-        title: old.title,
-        date: old.date,
-        time: old.time,
+      _orders[index] = old.copyWith(
         status: newStatus,
-        image: old.image,
-        location: old.location,
-        detailAddress: old.detailAddress,
-        plateNumber: old.plateNumber,
-        username: old.username,
-        phoneNumber: old.phoneNumber,
-        bookingId: old.bookingId,
-        carType: old.carType,
-        price: old.price,
-        servicePrice: old.servicePrice,
-        tax: old.tax,
-        discount: old.discount,
-        total: old.total,
       );
 
       notifyListeners();
     }
+  }
+
+  // ✅ OPSIONAL: MASIH BOLEH PAKE INDEX JIKA KAMU MAU
+  void updateOrderStatus(int index, String newStatus) {
+    if (index >= 0 && index < _orders.length) {
+      final old = _orders[index];
+
+      _orders[index] = old.copyWith(
+        status: newStatus,
+      );
+
+      notifyListeners();
+    }
+  }
+
+  // ✅ HAPUS SEMUA PESANAN (DEBUG / RESET)
+  void clearOrders() {
+    _orders.clear();
+    notifyListeners();
   }
 }

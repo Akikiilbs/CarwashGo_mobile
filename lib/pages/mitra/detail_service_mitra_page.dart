@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/order_provider.dart';
 import '../../pages/mitra/mitra_map_page.dart';
 
 class DetailServiceMitraPage extends StatefulWidget {
+  final int providerIndex; // ✅ WAJIB
   final String username;
   final String phoneNumber;
   final String bookingId;
@@ -19,6 +23,7 @@ class DetailServiceMitraPage extends StatefulWidget {
 
   const DetailServiceMitraPage({
     super.key,
+    required this.providerIndex, // ✅ WAJIB
     required this.username,
     required this.phoneNumber,
     required this.bookingId,
@@ -40,13 +45,12 @@ class DetailServiceMitraPage extends StatefulWidget {
 }
 
 class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
-  String selectedStatus = "Menunggu";
+  String selectedStatus = "pengerjaan";
 
   final List<String> statusList = [
-    "Menunggu",
-    "Dalam Perjalanan",
-    "Dalam Pengerjaan",
-    "Selesai",
+    "pengerjaan",
+    "dalam perjalanan",
+    "selesai",
   ];
 
   @override
@@ -80,13 +84,6 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ],
           ),
 
           child: Column(
@@ -105,7 +102,6 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
 
               const Divider(),
 
-              // ==== MAP BUTTON ====
               GestureDetector(
                 onTap: () {
                   Navigator.push(
@@ -138,14 +134,13 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              "Alamat Lengkap (Klik untuk buka Maps)",
+                              "Alamat Lengkap",
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blueAccent,
-                              ),
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blueAccent),
                             ),
-                            const SizedBox(height: 5),
-                            Text("${widget.address}\n${widget.detailAddress}"),
+                            Text(
+                                "${widget.address}\n${widget.detailAddress}"),
                           ],
                         ),
                       ),
@@ -168,59 +163,59 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
 
               const SizedBox(height: 20),
 
-              // ==================== UPDATE STATUS ====================
               const Text(
                 "Update Status Pesanan",
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent,
-                ),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent),
               ),
 
               const SizedBox(height: 12),
 
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedStatus,
-                    items: statusList.map((s) {
-                      return DropdownMenuItem(
+              DropdownButtonFormField<String>(
+                value: selectedStatus,
+                items: statusList
+                    .map(
+                      (s) => DropdownMenuItem(
                         value: s,
-                        child: Text(
-                          s,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedStatus = value!;
-                      });
-                    },
+                        child: Text(s),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) {
+                  setState(() => selectedStatus = v!);
+                },
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.blue.shade50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              // BUTTON SAVE STATUS
+              // ✅✅✅ SAVE KE PROVIDER
               SizedBox(
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
                   onPressed: () {
+                    context.read<OrderProvider>().updateOrderStatus(
+                          widget.providerIndex,
+                          selectedStatus,
+                        );
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            "Status diperbarui: $selectedStatus"),
+                        content:
+                            Text("Status diperbarui: $selectedStatus"),
                       ),
                     );
+
+                    Navigator.pop(context); // ✅ PENTING agar refresh
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent,
@@ -231,10 +226,9 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                   child: const Text(
                     "SIMPAN STATUS",
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontSize: 15,
-                    ),
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        fontSize: 15),
                   ),
                 ),
               ),
@@ -253,14 +247,13 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, color: Colors.black87)),
+              style:
+                  const TextStyle(fontWeight: FontWeight.w600)),
           Text(
             "$value",
             style: TextStyle(
               fontSize: big ? 18 : 15,
               fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              color: Colors.black87,
             ),
           ),
         ],

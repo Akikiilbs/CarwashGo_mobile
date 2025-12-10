@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/order_provider.dart';
+import '../../models/order_model.dart';
 import '../navigation/bottom_nav_mitra.dart';
 import 'detail_service_mitra_page.dart';
 
@@ -13,65 +17,37 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
     with TickerProviderStateMixin {
   late TabController _tabController;
 
-  // ================================
-  // DUMMY DATA
-  // ================================
-  List<Map<String, dynamic>> newOrders = [
-    {
-      "username": "Abelino Simatupang",
-      "phone": "081234567890",
-      "carType": "Cuci Premium",
-      "status": "Baru",
-      "address": "Tampan, Pekanbaru",
-      "detail": "Blok C No.12",
-      "plate": "BP 1234 AB",
-      "date": "Sun 11",
-      "time": "09.00 - 10.00",
-      "price": 55000,
-      "servicePrice": 25000,
-      "tax": 5000,
-      "discount": 0,
-      "lat": 0.4634,
-      "lng": 101.3908,
-    },
-  ];
-
-  List<Map<String, dynamic>> activeOrders = [];
-
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
   }
 
-  void acceptOrder(int index) {
-    final order = newOrders[index];
-    setState(() {
-      activeOrders.add({...order, "status": "Menunggu"});
-      newOrders.removeAt(index);
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Pesanan diterima")),
-    );
-
-    _tabController.animateTo(1);
-  }
-
-  void updateStatus(int index) {
-    setState(() {
-      final current = activeOrders[index]["status"];
-
-      if (current == "Menunggu") {
-        activeOrders[index]["status"] = "Dalam Proses";
-      } else if (current == "Dalam Proses") {
-        activeOrders[index]["status"] = "Selesai";
-      }
-    });
+  /// ✅ Update status di provider
+  void _updateOrderStatus(
+      BuildContext context, int providerIndex, String newStatus) {
+    context.read<OrderProvider>().updateOrderStatus(
+          providerIndex,
+          newStatus,
+        );
   }
 
   @override
   Widget build(BuildContext context) {
+    final orderProv = context.watch<OrderProvider>();
+
+    /// ✅ Ambil hanya pesanan milik mitra ini
+    final allMitraOrders =
+        orderProv.orders.where((o) => o.mitraId == "mitra").toList();
+
+    final newOrders = allMitraOrders
+        .where((o) => o.status == "menunggu mitra")
+        .toList();
+
+    final activeOrders = allMitraOrders
+        .where((o) => o.status != "menunggu mitra")
+        .toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FF),
 
@@ -97,8 +73,9 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
       body: TabBarView(
         controller: _tabController,
         children: [
+
           // ======================
-          // TAB 1 — NOTIFIKASI
+          // ✅ TAB 1 — PESANAN BARU
           // ======================
           newOrders.isEmpty
               ? const Center(child: Text("Tidak ada pesanan baru"))
@@ -106,19 +83,25 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
                   padding: const EdgeInsets.all(16),
                   itemCount: newOrders.length,
                   itemBuilder: (context, index) {
-                    final o = newOrders[index];
+                    final order = newOrders[index];
+
+                    /// ✅ Index asli di provider
+                    final providerIndex =
+                        orderProv.orders.indexOf(order);
+
                     return _orderCard(
-                      title: o["username"],
-                      subtitle: o["carType"],
+                      title: order.username,
+                      subtitle: order.carType,
                       status: "Pesanan Baru",
                       statusColor: Colors.orange,
-                      onTap: () => _showConfirmDialog(index),
+                      onTap: () =>
+                          _showConfirmDialog(context, providerIndex),
                     );
                   },
                 ),
 
           // ======================
-          // TAB 2 — PESANAN AKTIF
+          // ✅ TAB 2 — PESANAN AKTIF
           // ======================
           activeOrders.isEmpty
               ? const Center(child: Text("Belum ada pesanan aktif"))
@@ -126,15 +109,23 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
                   padding: const EdgeInsets.all(16),
                   itemCount: activeOrders.length,
                   itemBuilder: (context, index) {
-                    final o = activeOrders[index];
+                    final order = activeOrders[index];
+
+                    final providerIndex =
+                        orderProv.orders.indexOf(order);
+
                     return _orderCard(
-                      title: o["username"],
-                      subtitle: o["carType"],
-                      status: o["status"],
-                      statusColor: o["status"] == "Selesai"
+                      title: order.username,
+                      subtitle: order.carType,
+                      status: order.status,
+                      statusColor: order.status == "selesai"
                           ? Colors.green
                           : Colors.blue,
-                      onTap: () => _openDetail(o, index),
+                      onTap: () => _openDetail(
+                        context,
+                        order,
+                        providerIndex,
+                      ),
                     );
                   },
                 ),
@@ -146,7 +137,7 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
   }
 
   // ===========================
-  // CARD UI
+  // ✅ CARD UI
   // ===========================
   Widget _orderCard({
     required String title,
@@ -181,7 +172,8 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: Colors.black54)),
+                Text(subtitle,
+                    style: const TextStyle(color: Colors.black54)),
               ],
             ),
             Text(
@@ -198,15 +190,16 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
   }
 
   // ===========================
-  // DIALOG KONFIRMASI
+  // ✅ DIALOG TERIMA PESANAN
   // ===========================
-  void _showConfirmDialog(int index) {
+  void _showConfirmDialog(BuildContext context, int providerIndex) {
     showDialog(
       context: context,
       builder: (_) {
         return AlertDialog(
           title: const Text("Terima pesanan?"),
-          content: const Text("Pesanan ini akan masuk ke Pesanan Aktif."),
+          content:
+              const Text("Pesanan ini akan masuk ke Pesanan Aktif."),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -215,7 +208,13 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                acceptOrder(index);
+
+                /// ✅ UBAH STATUS
+                _updateOrderStatus(
+                    context, providerIndex, "pengerjaan");
+
+                /// ✅ PINDAH KE TAB AKTIF
+                _tabController.animateTo(1);
               },
               child: const Text("Terima"),
             ),
@@ -226,34 +225,34 @@ class _MitraOrdersPageState extends State<MitraOrdersPage>
   }
 
   // ===========================
-  // OPEN DETAIL SERVICE MITRA
+  // ✅ BUKA DETAIL SERVICE MITRA
   // ===========================
-  void _openDetail(Map<String, dynamic> order, int index) {
+  void _openDetail(
+      BuildContext context,
+      Order order,
+      int providerIndex,
+      ) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => DetailServiceMitraPage(
-          username: order["username"],
-          phoneNumber: order["phone"],
-          bookingId: "ID-0001",
-          date: order["date"],
-          time: order["time"],
-          carType: order["carType"],
-          price: order["price"],
-          servicePrice: order["servicePrice"],
-          tax: order["tax"],
-          discount: order["discount"],
-          address: order["address"],
-          detailAddress: order["detail"],
-          plateNumber: order["plate"],
-          total: order["price"] +
-              order["servicePrice"] +
-              order["tax"] -
-              order["discount"],
+          providerIndex: providerIndex, // ✅ KUNCI UPDATE STATUS
+          username: order.username,
+          phoneNumber: order.phoneNumber,
+          bookingId: order.bookingId,
+          date: order.date,
+          time: order.time,
+          carType: order.carType,
+          price: order.price,
+          servicePrice: order.servicePrice,
+          tax: order.tax,
+          discount: order.discount,
+          address: order.location,
+          detailAddress: order.detailAddress,
+          plateNumber: order.plateNumber,
+          total: order.total,
         ),
       ),
-    ).then((_) {
-      updateStatus(index);
-    });
+    );
   }
 }
