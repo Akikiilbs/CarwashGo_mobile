@@ -25,6 +25,7 @@ class _BookingPageState extends State<BookingPage> {
   final TextEditingController plateNumberController = TextEditingController();
 
   bool _isLoading = false; // 👈 TAMBAH
+  // ignore: unused_field
   String? _errorMessage; // 👈 TAMBAH
 
   final _orderApi = OrderApi(); // 👈 TAMBAH

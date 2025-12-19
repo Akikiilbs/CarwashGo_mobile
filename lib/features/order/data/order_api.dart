@@ -6,8 +6,7 @@ import '../models/simple_api_response.dart';
 class OrderApi {
   final Dio _dio = DioClient().dio;
 
-  /// POST /orders
-  /// Sesuaikan field2 di data: {} dengan Laravel OrderController@store
+  /// (LEGACY) masih dummy (UI lama kamu masih pakai ini)
   Future<SimpleApiResponse> createOrder({
     required String carType,
     required String serviceType,
@@ -19,21 +18,63 @@ class OrderApi {
     required double distanceKm,
     required int totalPrice,
   }) async {
+    // ⚠️ Catatan: backend sudah disarankan pakai createOrderV2 (partner_id, vehicle_type_id, items)
+    // Ini sengaja dibiarkan agar project tidak langsung rusak saat kamu copy-paste patch backend.
+    return SimpleApiResponse(
+      status: 'error',
+      message:
+          'Endpoint order sudah berubah. Gunakan createOrderV2() (partner_id, vehicle_type_id, items).',
+    );
+  }
+
+  /// ✅ V2 (match backend OrderController@store yang baru)
+  Future<SimpleApiResponse> createOrderV2({
+    required int partnerId,
+    required int vehicleTypeId,
+
+    String? vehicleBrand,
+    String? vehicleModel,
+    String? plateNumber,
+    String? vehicleColor,
+
+    required String address,
+    double? latitude,
+    double? longitude,
+
+    required String scheduledDate, // 'YYYY-MM-DD'
+    required String scheduledTime, // 'HH:mm'
+
+    String? notes,
+    double discount = 0,
+    String? paymentMethod, // cash|ewallet|bank_transfer|null
+
+    required List<Map<String, dynamic>> items,
+    // contoh items: [{'partner_service_id': 55, 'quantity': 1}]
+  }) async {
     try {
       final res = await _dio.post(
         '/orders',
         data: {
-          // 👉 SESUAIKAN DENGAN BACKEND
-          // kalau di Laravel namanya lain (vehicle_type_id, schedule_date, dll), ganti di sini
-          'car_type': carType,
-          'service_type': serviceType,
-          'address': mainAddress,
-          'detail_address': detailAddress,
+          'partner_id': partnerId,
+          'vehicle_type_id': vehicleTypeId,
+
+          'vehicle_brand': vehicleBrand,
+          'vehicle_model': vehicleModel,
           'plate_number': plateNumber,
-          'schedule_date_label': dateLabel,
-          'schedule_time_label': timeSlot,
-          'distance_km': distanceKm,
-          'total_price': totalPrice,
+          'vehicle_color': vehicleColor,
+
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+
+          'scheduled_date': scheduledDate,
+          'scheduled_time': scheduledTime,
+
+          'notes': notes,
+          'discount': discount,
+          'payment_method': paymentMethod,
+
+          'items': items,
         },
       );
 

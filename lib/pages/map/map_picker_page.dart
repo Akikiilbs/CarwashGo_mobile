@@ -62,7 +62,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Future<LatLng?> _getWebLocation() async {
     final completer = Completer<LatLng?>();
 
-    html.window.navigator.geolocation?.getCurrentPosition().then((pos) {
+    html.window.navigator.geolocation.getCurrentPosition().then((pos) {
       final num lat = pos.coords?.latitude ?? 0.0;
       final num lng = pos.coords?.longitude ?? 0.0;
       completer.complete(LatLng(lat.toDouble(), lng.toDouble()));
