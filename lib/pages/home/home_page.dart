@@ -1,79 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/station_provider.dart';
+import '../../models/mitra_station.dart';
 import '../navigation/detail_station_page.dart';
 import '../navigation/bottom_nav.dart';
 
-class HomePage extends StatefulWidget {
+class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  final List<Map<String, dynamic>> _stations = [
-    {
-      "name": "Pak De Station",
-      "location": "Tampan, Pekanbaru",
-      "rating": 5.0,
-      "image": "assets/images/mobil1.png"
-    },
-    {
-      "name": "Haji Rahmat Habsin Station",
-      "location": "Tampan, Pekanbaru",
-      "rating": 5.0,
-      "image": "assets/images/on1.png"
-    },
-    {
-      "name": "R CarWash Station",
-      "location": "Tampan, Pekanbaru",
-      "rating": 4.0,
-      "image": "assets/images/carwashgo_logo.png"
-    },
-  ];
-
-  @override
   Widget build(BuildContext context) {
+    final stationProv = context.watch<StationProvider>();
+    final List<MitraStation> stations = stationProv.stations;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF6F8FB),
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
-
+              // ================= HEADER =================
+              const SizedBox(height: 10),
               const Text(
-                "Welcome !!!",
+                "Welcome 👋",
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent
+                  color: Colors.blueAccent,
                 ),
               ),
-
+              const SizedBox(height: 4),
               const Text(
                 "Have a good day",
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.blueAccent
+                  fontSize: 18,
+                  color: Colors.black54,
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 24),
 
-              // SPECIAL OFFER
+              // ================= PROMO CARD =================
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF64B5F6), Color(0xFF1976D2)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                 ),
                 child: Row(
                   children: [
@@ -82,136 +62,205 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Special Offer !!!",
-                              style: TextStyle(color: Colors.white, fontSize: 16)),
-                          SizedBox(height: 5),
-                          Text("50% OFF",
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold)),
-                          Text("On First Service",
-                              style: TextStyle(color: Colors.white70, fontSize: 14)),
+                          Text(
+                            "Special Offer",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            "50% OFF",
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "For your first wash",
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                    Expanded(child: Image.asset("assets/images/on1.png"))
+                    Expanded(
+                      child: Image.asset("assets/images/on1.png"),
+                    ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 26),
 
+              // ================= TITLE =================
               const Text(
-                "Recommend Station",
+                "Recommended Station",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blueAccent
+                  color: Colors.blueAccent,
                 ),
               ),
-
               const SizedBox(height: 16),
 
+              // ================= LIST STATION =================
               Column(
-                children: _stations.map((station) {
-                  return _buildStationCard(
-                    context: context,
-                    image: station["image"],
-                    name: station["name"],
-                    location: station["location"],
-                    rating: station["rating"],
-                  );
-                }).toList(),
+                children: stations
+                    .map(
+                      (station) => _stationCard(
+                        context: context,
+                        station: station,
+                      ),
+                    )
+                    .toList(),
               ),
             ],
           ),
         ),
       ),
 
+      // ✅ NAVBAR TETAP 3: HOME - NOTIF - PROFIL
       bottomNavigationBar: const BottomNav(currentIndex: 0),
     );
   }
 
-  Widget _buildStationCard({
+  // ===================== STATION CARD =====================
+  Widget _stationCard({
     required BuildContext context,
-    required String image,
-    required String name,
-    required String location,
-    required double rating,
+    required MitraStation station,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(15),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ================= IMAGE =================
           ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: Image.asset(image, width: 70, height: 70),
+            borderRadius: BorderRadius.circular(14),
+            child: Image.asset(
+              station.image,
+              width: 75,
+              height: 75,
+              fit: BoxFit.cover,
+            ),
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
 
+          // ================= INFO =================
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  station.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
                 const SizedBox(height: 4),
+
                 Row(
                   children: [
-                    const Icon(Icons.location_on_rounded,
-                        color: Colors.blueAccent, size: 16),
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 15,
+                      color: Colors.blueAccent,
+                    ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: Text(location,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13)),
+                      child: Text(
+                        station.location,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black54,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+
+                const SizedBox(height: 6),
+
                 Row(
                   children: [
-                    ...List.generate(
-                      5,
-                      (i) => Icon(
-                        i < rating ? Icons.star_rounded : Icons.star_border_rounded,
-                        size: 18,
-                        color: Colors.amber,
-                      ),
+                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      station.rating.toStringAsFixed(1),
+                      style: const TextStyle(fontSize: 13),
                     ),
-                    Text(" (${rating.toStringAsFixed(1)})",
-                        style: const TextStyle(fontSize: 13)),
+                    const SizedBox(width: 12),
+
+                    if (station.harga.isNotEmpty)
+                      Text(
+                        "Rp ${station.harga}",
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blueAccent,
+                        ),
+                      ),
                   ],
                 ),
               ],
             ),
           ),
 
-          TextButton(
+          // ================= BUTTON =================
+          ElevatedButton(
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => DetailStationPage(
-                    image: image,
-                    name: name,
-                    location: location,
-                    rating: rating,
+                    image: station.image,
+                    name: station.name,
+                    location: station.location,
+                    rating: station.rating,
+                    description: station.description,
+                    operationalHours: station.jamOperasional,  // ✅ FIX
+                    operationalDays: station.hariOperasional,  // ✅ FIX
+                    price: station.harga,                     // ✅ STRING
                   ),
                 ),
               );
             },
-            child: const Text("Book Now", style: TextStyle(color: Colors.blueAccent)),
-          )
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blueAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text(
+              "Book",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );

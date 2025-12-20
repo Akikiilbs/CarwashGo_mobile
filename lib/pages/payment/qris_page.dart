@@ -8,9 +8,9 @@ import '../../models/order_model.dart';
 class QRISPage extends StatefulWidget {
   final String username;
   final String phoneNumber;
-  final String address;       // alamat dari map picker
-  final String detailAddress; // detail alamat
-  final String plateNumber;   // plat mobil
+  final String address;
+  final String detailAddress;
+  final String plateNumber;
   final String carType;
 
   final int price;
@@ -46,7 +46,7 @@ class _QRISPageState extends State<QRISPage> {
   void initState() {
     super.initState();
 
-    // Simulasi pembayaran
+    // ✅ Simulasi pembayaran sukses
     Future.delayed(const Duration(seconds: 3), () {
       if (!mounted) return;
       setState(() => _isPaymentSuccess = true);
@@ -79,20 +79,13 @@ class _QRISPageState extends State<QRISPage> {
                 const SizedBox(height: 16),
                 const Text(
                   "Pembayaran Berhasil!",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
                 const Text(
                   "Pesanan Anda telah diterima.",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.black54,
-                  ),
                   textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15, color: Colors.black54),
                 ),
                 const SizedBox(height: 25),
 
@@ -110,9 +103,7 @@ class _QRISPageState extends State<QRISPage> {
                     child: const Text(
                       "Selesai",
                       style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
+                          color: Colors.white, fontWeight: FontWeight.bold),
                     ),
                   ),
                 )
@@ -124,36 +115,39 @@ class _QRISPageState extends State<QRISPage> {
     );
   }
 
+  // ============================
+  // ✅ SIMPAN PESANAN KE PROVIDER
+  // ============================
   void _finishPayment() {
     final orderProvider =
         Provider.of<OrderProvider>(context, listen: false);
 
-    // Tambahkan pesanan baru → konsisten dengan BookingPage
-    orderProvider.addOrder(
-      Order(
-        title: "Cuci Mobil",
-        date: DateTime.now().toString().substring(0, 10),
-        time: "Menunggu Konfirmasi",
-        status: "menunggu mitra",
-        image: "assets/images/mobil1.png",
-        location: widget.address,
-        detailAddress: widget.detailAddress,
-        plateNumber: widget.plateNumber,
-        username: widget.username,
-        phoneNumber: widget.phoneNumber,
-        bookingId: DateTime.now().millisecondsSinceEpoch.toString(),
-        carType: widget.carType,
-        price: widget.price,
-        servicePrice: widget.servicePrice,
-        tax: widget.tax,
-        discount: widget.discount,
-        total: widget.total,
-      ),
+    final newOrder = Order(
+      mitraId: "mitra", // ✅ INI KUNCI AGAR MASUK KE MITRA ORDERS
+      title: "Cuci Mobil",
+      date: DateTime.now().toString().substring(0, 10),
+      time: "Menunggu Konfirmasi",
+      status: "menunggu mitra",
+      image: "assets/images/mobil1.png",
+      location: widget.address,
+      detailAddress: widget.detailAddress,
+      plateNumber: widget.plateNumber,
+      username: widget.username,
+      phoneNumber: widget.phoneNumber,
+      bookingId: DateTime.now().millisecondsSinceEpoch.toString(),
+      carType: widget.carType,
+      price: widget.price,
+      servicePrice: widget.servicePrice,
+      tax: widget.tax,
+      discount: widget.discount,
+      total: widget.total,
     );
 
-    // Tambahkan notifikasi
-    Provider.of<NotificationProvider>(context, listen: false)
-        .addNotification(
+    // ✅ SIMPAN KE PROVIDER (DARI SINI MASUK KE HALAMAN MITRA)
+    orderProvider.addOrder(newOrder);
+
+    // ✅ Tambahkan notifikasi user
+    Provider.of<NotificationProvider>(context, listen: false).addNotification(
       AppNotification(
         title: "Pembayaran Berhasil",
         message:
@@ -163,7 +157,7 @@ class _QRISPageState extends State<QRISPage> {
       ),
     );
 
-    Navigator.pop(context); // tutup popup
+    Navigator.pop(context);
     Navigator.pushNamedAndRemoveUntil(
       context,
       "/home",
@@ -175,24 +169,21 @@ class _QRISPageState extends State<QRISPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       appBar: AppBar(
         title: const Text(
           "QRIS Payment",
-          style: TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         elevation: 0,
         backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.black87,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -229,8 +220,7 @@ class _QRISPageState extends State<QRISPage> {
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed:
-                    _isPaymentSuccess ? _showSuccessPopup : null,
+                onPressed: _isPaymentSuccess ? _showSuccessPopup : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       _isPaymentSuccess ? Colors.blueAccent : Colors.grey,

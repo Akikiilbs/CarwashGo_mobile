@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/review_provider.dart';
 import '../navigation/bottom_nav_mitra.dart';
 
 class MitraRatingPage extends StatelessWidget {
@@ -6,6 +8,8 @@ class MitraRatingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final reviews = context.watch<ReviewProvider>().reviews;
+
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -25,60 +29,63 @@ class MitraRatingPage extends StatelessWidget {
         ),
       ),
 
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: const [
-          _reviewItem("Abelino", 5, "Pelayanan bagus dan cepat!"),
-          _reviewItem("Tio Rimexx", 4, "Cukup baik, mobil bersih."),
-          _reviewItem("Daeng Agung", 5, "Recommended banget!"),
-        ],
-      ),
+      body: reviews.isEmpty
+          ? const Center(
+              child: Text(
+                "Belum ada ulasan",
+                style: TextStyle(color: Colors.black54),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: reviews.length,
+              itemBuilder: (context, index) {
+                final review = reviews[index];
+
+                return Container(
+                  padding: const EdgeInsets.all(18),
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12.withOpacity(0.08),
+                        blurRadius: 10,
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            review.username,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            "⭐ ${review.rating}",
+                            style: const TextStyle(
+                              color: Colors.orange,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(review.comment),
+                    ],
+                  ),
+                );
+              },
+            ),
 
       bottomNavigationBar: const BottomNavMitra(currentIndex: 2),
-    );
-  }
-}
-
-class _reviewItem extends StatelessWidget {
-  final String name;
-  final int rating;
-  final String desc;
-
-  const _reviewItem(this.name, this.rating, this.desc);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12.withOpacity(0.08),
-            blurRadius: 10,
-          )
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(name,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              Text("⭐ $rating",
-                  style: const TextStyle(
-                      color: Colors.orange, fontSize: 16)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(desc),
-        ],
-      ),
     );
   }
 }

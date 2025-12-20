@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/review_provider.dart';
 import '../navigation/bottom_nav_mitra.dart';
 
 class HomeMitraPage extends StatelessWidget {
@@ -16,14 +19,17 @@ class HomeMitraPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-              // HEADER
+              // ================= HEADER =================
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Image.asset("assets/images/icon.png",
-                          width: 32, height: 32),
+                      Image.asset(
+                        "assets/images/icon.png",
+                        width: 32,
+                        height: 32,
+                      ),
                       const SizedBox(width: 10),
                       const Text(
                         "CarWashGo",
@@ -85,7 +91,8 @@ class HomeMitraPage extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _infoCard(
-                      onTap: () => Navigator.pushNamed(context, "/mitra-orders"),
+                      onTap: () =>
+                          Navigator.pushNamed(context, "/mitra-orders"),
                       icon: Icons.calendar_today,
                       color: Colors.redAccent,
                       title: "Pesanan",
@@ -93,13 +100,27 @@ class HomeMitraPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+
+                  // ✅ ✅ ✅ RATING TERHUBUNG KE REVIEW PROVIDER
                   Expanded(
-                    child: _infoCard(
-                      onTap: () => Navigator.pushNamed(context, "/mitra-rating"),
-                      icon: Icons.star,
-                      color: Colors.orange,
-                      title: "4.9/5",
-                      subtitle: "Rating Pelanggan",
+                    child: Consumer<ReviewProvider>(
+                      builder: (context, reviewProv, _) {
+                        final avg = reviewProv.averageRating;
+                        final total = reviewProv.totalReview;
+
+                        return _infoCard(
+                          onTap: () =>
+                              Navigator.pushNamed(context, "/mitra-rating"),
+                          icon: Icons.star,
+                          color: Colors.orange,
+                          title: total == 0
+                              ? "0.0/5"
+                              : "${avg.toStringAsFixed(1)}/5",
+                          subtitle: total == 0
+                              ? "Belum ada ulasan"
+                              : "Dari $total ulasan",
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -145,9 +166,24 @@ class HomeMitraPage extends StatelessWidget {
 
               const SizedBox(height: 12),
 
-              _bookingCard("Abelino Simatupang", "Cuci Premium", "Selesai", Colors.green),
-              _bookingCard("Tio Rimexxx", "Cuci Ekspres", "Dalam Proses", Colors.orange),
-              _bookingCard("Daeng Agung", "Cuci Interior", "Menunggu", Colors.grey),
+              _bookingCard(
+                "Abelino Simatupang",
+                "Cuci Premium",
+                "Selesai",
+                Colors.green,
+              ),
+              _bookingCard(
+                "Tio Rimexxx",
+                "Cuci Ekspres",
+                "Dalam Proses",
+                Colors.orange,
+              ),
+              _bookingCard(
+                "Daeng Agung",
+                "Cuci Interior",
+                "Menunggu",
+                Colors.grey,
+              ),
 
               const SizedBox(height: 80),
             ],
@@ -155,11 +191,12 @@ class HomeMitraPage extends StatelessWidget {
         ),
       ),
 
-      bottomNavigationBar: BottomNavMitra(currentIndex: 0),
+      bottomNavigationBar: const BottomNavMitra(currentIndex: 0),
     );
   }
 }
 
+// ================= INFO CARD WIDGET =================
 Widget _infoCard({
   required VoidCallback onTap,
   required IconData icon,
@@ -187,12 +224,20 @@ Widget _infoCard({
         children: [
           Icon(icon, size: 30, color: color),
           const SizedBox(height: 10),
-          Text(title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: const TextStyle(color: Colors.black54, fontSize: 13),
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -200,6 +245,7 @@ Widget _infoCard({
   );
 }
 
+// ================= BOOKING CARD WIDGET =================
 Widget _bookingCard(
   String name,
   String service,
@@ -226,9 +272,13 @@ Widget _bookingCard(
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(name,
-                style: const TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.bold)),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 4),
             Text(service, style: const TextStyle(color: Colors.black54)),
           ],

@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Providers
+// ================= PROVIDERS =================
 import 'providers/notification_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/review_provider.dart';
+import 'providers/mitra_provider.dart'; 
+import 'providers/station_provider.dart';
 
-// Routes
+// ================= ROUTES =================
 import 'routes/app_routes.dart';
 
-// Theme
+// ================= THEME =================
 import 'core/theme/app_theme.dart';
 
 void main() {
@@ -21,6 +24,9 @@ void main() {
         ChangeNotifierProvider(create: (_) => OrderProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => ReviewProvider()),
+        ChangeNotifierProvider(create: (_) => MitraProvider()), 
+        ChangeNotifierProvider(create: (_) => StationProvider()),
       ],
       child: const MyApp(),
     ),
