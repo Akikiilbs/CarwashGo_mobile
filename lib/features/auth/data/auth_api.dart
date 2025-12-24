@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_response.dart';
 import '../models/user.dart';
 import '../../../core/network/dio_client.dart';
+import 'dart:typed_data';
 
 class AuthApi {
   final Dio _dio = DioClient().dio;
@@ -125,7 +126,30 @@ class AuthApi {
     await _storage.delete(key: 'auth_token');
     return true;
   }
+  // Verifikasi OTP reset password
+Future<AuthResponse> verifyResetOtp({
+  required String email,
+  required String otp,
+}) async {
+  try {
+    final response = await _dio.post(
+      '/auth/password/verify-otp',
+      data: {
+        'email': email,
+        'otp': otp,
+      },
+    );
 
+    return AuthResponse.fromJson(response.data);
+  } on DioException catch (e) {
+    if (e.response != null && e.response?.data is Map<String, dynamic>) {
+      return AuthResponse.fromJson(e.response!.data);
+    }
+    return AuthResponse(status: 'error', message: 'Terjadi kesalahan jaringan');
+  } catch (_) {
+    return AuthResponse(status: 'error', message: 'Terjadi kesalahan tak terduga');
+  }
+}
   // Kirim OTP reset password
   Future<AuthResponse> sendResetOtp({required String email}) async {
     try {
@@ -193,76 +217,50 @@ class AuthApi {
   /// POST /auth/register-partner
   /// body: { name, email, phone, password }
   Future<AuthResponse> registerPartner({
-    required String name,
-    required String email,
-    required String phone,
-    required String password,
-    required String businessName, // 👈 NEW
-    required String address, // 👈 NEW
-  }) async {
-    try {
-      final response = await _dio.post(
-        '/auth/register-partner',
-        data: {
-          'name': name,
-          'email': email,
-          'phone': phone,
-          'password': password,
-          'business_name': businessName, // 👈 harus sama dengan key di Laravel
-          'address': address, // 👈 sama dengan key di Laravel
-        },
-      );
+  required String name,
+  required String email,
+  required String phone,
+  required String password,
+  required String businessName,
+  required String address,
+  required double latitude,
+  required double longitude,
+  required Uint8List outletPhotoBytes,
+  required String outletPhotoFilename,
+}) async {
+  try {
+    final formData = FormData.fromMap({
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'password': password,
+      'business_name': businessName,
+      'address': address,
+      'latitude': latitude,
+      'longitude': longitude,
+      'outlet_photo': MultipartFile.fromBytes(
+        outletPhotoBytes,
+        filename: outletPhotoFilename,
+      ),
+    });
 
-      // di backend kita tidak buat token, hanya status + message
-      final authResponse = AuthResponse.fromJson(response.data);
-      return authResponse;
-    } on DioException catch (e) {
-      if (e.response != null && e.response?.data is Map<String, dynamic>) {
-        return AuthResponse.fromJson(e.response!.data);
-      }
+    final response = await _dio.post(
+      '/auth/register-partner',
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
 
-      return AuthResponse(
-        status: 'error',
-        message: 'Terjadi kesalahan jaringan',
-      );
-    } catch (_) {
-      return AuthResponse(
-        status: 'error',
-        message: 'Terjadi kesalahan tak terduga',
-      );
+    return AuthResponse.fromJson(response.data);
+  } on DioException catch (e) {
+    if (e.response != null && e.response?.data is Map<String, dynamic>) {
+      return AuthResponse.fromJson(e.response!.data);
     }
+    return AuthResponse(status: 'error', message: 'Terjadi kesalahan jaringan');
+  } catch (_) {
+    return AuthResponse(status: 'error', message: 'Terjadi kesalahan tak terduga');
   }
+}
 
-// Verifikasi OTP reset password
-  Future<AuthResponse> verifyResetOtp({
-    required String email,
-    required String otp,
-  }) async {
-    try {
-      final response = await _dio.post(
-        '/auth/password/verify-otp', // endpoint forgot password
-        data: {
-          'email': email,
-          'otp': otp,
-        },
-      );
-
-      return AuthResponse.fromJson(response.data);
-    } on DioException catch (e) {
-      if (e.response != null && e.response?.data is Map<String, dynamic>) {
-        return AuthResponse.fromJson(e.response!.data);
-      }
-      return AuthResponse(
-        status: 'error',
-        message: 'Terjadi kesalahan jaringan',
-      );
-    } catch (_) {
-      return AuthResponse(
-        status: 'error',
-        message: 'Terjadi kesalahan tak terduga',
-      );
-    }
-  }
 
   // Reset password dengan OTP
   Future<AuthResponse> resetPassword({

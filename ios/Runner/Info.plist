@@ -23,6 +23,8 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikasi membutuhkan akses galeri untuk memilih foto outlet.</string>
 
 	<!-- ⭐ WAJIB untuk GPS -->
 	<key>NSLocationWhenInUseUsageDescription</key>
