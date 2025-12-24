@@ -22,9 +22,46 @@ class _OrdersTabState extends State<OrdersTab> {
   final Set<String> _reviewedOrderIds = {};
 
   @override
+  void initState() {
+    super.initState();
+    // Ambil data pesanan dari API setiap membuka tab
+    Future.microtask(() {
+      if (!mounted) return;
+      context.read<OrderProvider>().loadCustomerOrders();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final orderProv = Provider.of<OrderProvider>(context);
     final orders = orderProv.orders;
+
+    if (orderProv.isLoading && orders.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (orderProv.errorMessage != null && orders.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                orderProv.errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black54),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => context.read<OrderProvider>().loadCustomerOrders(),
+                child: const Text('Coba lagi'),
+              )
+            ],
+          ),
+        ),
+      );
+    }
 
     // ✅ CEK OTOMATIS: ADA PESANAN SELESAI & BELUM DIREVIEW → MUNCULKAN POPUP
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -32,8 +69,7 @@ class _OrdersTabState extends State<OrdersTab> {
 
       try {
         final selesaiOrder = orders.firstWhere(
-          (o) => o.status == "selesai" &&
-              !_reviewedOrderIds.contains(o.bookingId),
+          (o) => o.status == "completed" && !_reviewedOrderIds.contains(o.bookingId),
         );
 
         _popupShown = true;
@@ -101,10 +137,12 @@ class _OrdersTabState extends State<OrdersTab> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: orders.length,
-      itemBuilder: (context, index) {
+    return RefreshIndicator(
+      onRefresh: () => context.read<OrderProvider>().loadCustomerOrders(),
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: orders.length,
+        itemBuilder: (context, index) {
         final order = orders[index];
 
         // ✅ STATUS BADGE COLOR
@@ -112,19 +150,39 @@ class _OrdersTabState extends State<OrdersTab> {
         String statusText;
 
         switch (order.status) {
-          case "pengerjaan":
+          case "pending":
+            statusColor = Colors.grey;
+            statusText = "Menunggu Konfirmasi";
+            break;
+          case "accepted":
+            statusColor = Colors.blue;
+            statusText = "Diterima";
+            break;
+          case "on_the_way":
+            statusColor = Colors.orange;
+            statusText = "Menuju Lokasi";
+            break;
+          case "in_progress":
             statusColor = Colors.orange;
             statusText = "Dalam Pengerjaan";
             break;
-          case "selesai":
+          case "completed":
             statusColor = Colors.green;
             statusText = _reviewedOrderIds.contains(order.bookingId)
                 ? "Selesai • Sudah Diulas"
                 : "Selesai";
             break;
+          case "rejected":
+            statusColor = Colors.red;
+            statusText = "Ditolak";
+            break;
+          case "cancelled":
+            statusColor = Colors.redAccent;
+            statusText = "Dibatalkan";
+            break;
           default:
             statusColor = Colors.grey;
-            statusText = "Menunggu Konfirmasi";
+            statusText = order.status;
         }
 
         return GestureDetector(
@@ -228,7 +286,8 @@ class _OrdersTabState extends State<OrdersTab> {
             ),
           ),
         );
-      },
+        },
+      ),
     );
   }
 }

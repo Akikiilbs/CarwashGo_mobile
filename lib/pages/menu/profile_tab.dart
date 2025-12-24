@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
+import 'package:carwashgo/features/auth/data/auth_api.dart';
+
 import '../../providers/user_provider.dart';
+import '../../providers/order_provider.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -17,6 +20,40 @@ class ProfileTab extends StatefulWidget {
 class _ProfileTabState extends State<ProfileTab> {
   File? _selectedImage;
   Uint8List? _webImage;
+
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Keluar?'),
+        content: const Text('Kamu akan logout dari aplikasi.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+            child: const Text('Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    // 1) Panggil API logout + delete token
+    await AuthApi().logout();
+
+    // 2) Bersihkan state lokal
+    if (!mounted) return;
+    context.read<UserProvider>().logout();
+    context.read<OrderProvider>().clearOrders();
+
+    // 3) Kembali ke role selection
+    Navigator.pushNamedAndRemoveUntil(context, '/role', (route) => false);
+  }
 
   Future<void> _pickImage() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -140,13 +177,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 style: TextStyle(color: Colors.white),
               ),
               onPressed: () {
-                Provider.of<UserProvider>(context, listen: false).logout();
-
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/login',
-                  (route) => false,
-                );
+                _logout();
               },
             ),
           ),

@@ -145,10 +145,31 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:carwashgo/features/auth/data/auth_api.dart';
+
 import '../../pages/navigation/bottom_nav_mitra.dart';
+import '../../providers/order_provider.dart';
+import '../../providers/user_provider.dart';
 
 class MitraProfilePage extends StatefulWidget {
   const MitraProfilePage({super.key});
+
+  @override
+  State<MitraProfilePage> createState() => _MitraProfilePageState();
+}
+
+class _MitraProfilePageState extends State<MitraProfilePage> {
+  // Variables needed for your logic
+  bool _isEditMode = false;
+  String mitra = "Mitra CarWashGo";
+
+  void _toggleEdit(String name) {
+    setState(() {
+      _isEditMode = !_isEditMode;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +177,7 @@ class MitraProfilePage extends StatefulWidget {
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
+        elevation: 0,
         title: const Text(
           "Profil Mitra",
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
@@ -163,18 +185,16 @@ class MitraProfilePage extends StatefulWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(_isEditMode ? Icons.save : Icons.edit),
+            icon: Icon(_isEditMode ? Icons.save : Icons.edit, color: Colors.white),
             onPressed: () => _toggleEdit(mitra),
           ),
-        ),
+        ],
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             const SizedBox(height: 15),
-
             CircleAvatar(
               radius: 50,
               backgroundColor: Colors.blueAccent.withOpacity(0.3),
@@ -184,32 +204,24 @@ class MitraProfilePage extends StatefulWidget {
                 color: Colors.blueAccent,
               ),
             ),
-
             const SizedBox(height: 12),
-
-            const Text(
-              "Mitra CarWashGo",
-              style: TextStyle(
+            Text(
+              mitra,
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
               ),
             ),
-
-                          const SizedBox(height: 30),
-
+            const SizedBox(height: 30),
             _infoTile(Icons.phone, "Nomor Telepon", "+628123456789"),
             const SizedBox(height: 10),
-
             _infoTile(Icons.location_on, "Alamat Usaha", "Belum diatur"),
             const SizedBox(height: 10),
-
             _infoTile(Icons.local_car_wash, "Jenis Layanan", "Cuci Premium"),
             const SizedBox(height: 25),
-
-            // ==========================
-            //        LOGOUT FIX
-            // ==========================
+            
+            // LOGOUT BUTTON
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -221,10 +233,45 @@ class MitraProfilePage extends StatefulWidget {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.pushNamedAndRemoveUntil(
-                    context,
-                    '/login-mitra',
-                    (route) => false,   // clear history -> FIX MACET
+                  showDialog(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text('Keluar?'),
+                      content: const Text('Kamu akan logout dari akun mitra.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Batal'),
+                        ),
+                        ElevatedButton(
+                          onPressed: () async {
+                            Navigator.pop(context);
+
+                            // 1) hit logout API + delete token
+                            await AuthApi().logout();
+                            if (!context.mounted) return;
+
+                            // 2) clear local providers
+                            context.read<UserProvider>().logout();
+                            context.read<OrderProvider>().clearOrders();
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Logout berhasil')),
+                            );
+
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/role',
+                              (route) => false,
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                          ),
+                          child: const Text('Keluar'),
+                        ),
+                      ],
+                    ),
                   );
                 },
                 child: const Text(
@@ -240,7 +287,6 @@ class MitraProfilePage extends StatefulWidget {
           ],
         ),
       ),
-
       bottomNavigationBar: const BottomNavMitra(currentIndex: 2),
     );
   }

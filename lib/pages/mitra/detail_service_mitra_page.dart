@@ -1,262 +1,205 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
-import '../../pages/mitra/mitra_map_page.dart';
 
 class DetailServiceMitraPage extends StatefulWidget {
-  final int providerIndex; // ✅ WAJIB
-  final String username;
-  final String phoneNumber;
-  final String bookingId;
-  final String date;
-  final String time;
-  final String carType;
-  final int price;
-  final int servicePrice;
-  final int tax;
-  final int discount;
-  final String address;
-  final String detailAddress;
-  final String plateNumber;
-  final int total;
+  final Order order;
 
-  const DetailServiceMitraPage({
-    super.key,
-    required this.providerIndex, // ✅ WAJIB
-    required this.username,
-    required this.phoneNumber,
-    required this.bookingId,
-    required this.date,
-    required this.time,
-    required this.carType,
-    required this.price,
-    required this.servicePrice,
-    required this.tax,
-    required this.discount,
-    required this.address,
-    required this.detailAddress,
-    required this.plateNumber,
-    required this.total,
-  });
+  const DetailServiceMitraPage({super.key, required this.order});
 
   @override
   State<DetailServiceMitraPage> createState() => _DetailServiceMitraPageState();
 }
 
 class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
-  String selectedStatus = "pengerjaan";
+  late String _status;
+  bool _saving = false;
 
-  final List<String> statusList = [
-    "pengerjaan",
-    "dalam perjalanan",
-    "selesai",
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _status = widget.order.status;
+  }
+
+  String _labelStatus(String s) {
+    switch (s) {
+      case 'pending':
+        return 'Menunggu';
+      case 'accepted':
+        return 'Diterima';
+      case 'on_the_way':
+        return 'Menuju Lokasi';
+      case 'in_progress':
+        return 'Dalam Pengerjaan';
+      case 'completed':
+        return 'Selesai';
+      case 'rejected':
+        return 'Ditolak';
+      case 'cancelled':
+        return 'Dibatalkan';
+      default:
+        return s;
+    }
+  }
+
+  List<String> _allowedNextStatuses(String current) {
+    // boleh bebas (biar tidak ngeblok partner saat testing)
+    // (backend juga akan validasi)
+    const all = ['accepted', 'on_the_way', 'in_progress', 'completed'];
+    if (current == 'completed' || current == 'rejected' || current == 'cancelled') return const [];
+    if (current == 'pending') return const ['accepted'];
+    return all;
+  }
+
+  Future<void> _updateStatus(String newStatus) async {
+    final orderId = int.tryParse(widget.order.bookingId) ?? 0;
+    if (orderId == 0) return;
+
+    setState(() => _saving = true);
+    final res = await context.read<OrderProvider>().partnerUpdateStatus(orderId: orderId, status: newStatus);
+    if (!mounted) return;
+
+    setState(() => _saving = false);
+
+    if (res.isSuccess) {
+      setState(() => _status = newStatus);
+      await context.read<OrderProvider>().loadPartnerOrders();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Status diperbarui: ${_labelStatus(newStatus)}')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(res.message)),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final o = widget.order;
+    final next = _allowedNextStatuses(_status);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE5F1FF),
-
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE5F1FF),
+        title: const Text('Detail Pesanan'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black87,
         elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          "Detail Service",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
-
-      body: SingleChildScrollView(
+      backgroundColor: const Color(0xFFF6F8FF),
+      body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _infoRow("Nama Pengguna", widget.username),
-              _infoRow("Nomor Telepon", widget.phoneNumber),
-              _infoRow("Booking ID", widget.bookingId),
-              _infoRow("Tanggal", widget.date),
-              _infoRow("Jam", widget.time),
-
-              const Divider(),
-
-              _infoRow("Jenis Mobil", widget.carType),
-              _infoRow("Plat Nomor", widget.plateNumber),
-
-              const Divider(),
-
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MitraMapPage(
-                        latitude: 0.4634,
-                        longitude: 101.3908,
-                        username: widget.username,
-                        address:
-                            "${widget.address}, ${widget.detailAddress}",
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  margin: const EdgeInsets.only(top: 10, bottom: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(12),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  )
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    o.title,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  child: Row(
+                  const SizedBox(height: 6),
+                  Text('Jadwal: ${o.date} ${o.time}', style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 6),
+                  Text('Plat: ${o.plateNumber}', style: const TextStyle(color: Colors.black54)),
+                  const SizedBox(height: 6),
+                  Text('Alamat: ${o.location}', maxLines: 2, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 10),
+                  Row(
                     children: [
-                      const Icon(Icons.location_on,
-                          color: Colors.blueAccent, size: 26),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Alamat Lengkap",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.blueAccent),
-                            ),
-                            Text(
-                                "${widget.address}\n${widget.detailAddress}"),
-                          ],
-                        ),
+                      const Icon(Icons.flag, size: 18, color: Colors.blueAccent),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Status: ${_labelStatus(_status)}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
-                ),
+                ],
               ),
-
-              const Divider(),
-
-              _infoRow("Harga Mobil", "Rp ${widget.price}"),
-              _infoRow("Harga Layanan", "Rp ${widget.servicePrice}"),
-              _infoRow("Pajak", "Rp ${widget.tax}"),
-              _infoRow("Diskon", "${widget.discount}%"),
-
-              const Divider(),
-
-              _infoRow("Total", "Rp ${widget.total}",
-                  bold: true, big: true),
-
-              const SizedBox(height: 20),
-
-              const Text(
-                "Update Status Pesanan",
-                style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent),
-              ),
-
-              const SizedBox(height: 12),
-
-              DropdownButtonFormField<String>(
-                value: selectedStatus,
-                items: statusList
-                    .map(
-                      (s) => DropdownMenuItem(
-                        value: s,
-                        child: Text(s),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) {
-                  setState(() => selectedStatus = v!);
-                },
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: Colors.blue.shade50,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ✅✅✅ SAVE KE PROVIDER
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    context.read<OrderProvider>().updateOrderStatus(
-                          widget.providerIndex,
-                          selectedStatus,
-                        );
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content:
-                            Text("Status diperbarui: $selectedStatus"),
-                      ),
-                    );
-
-                    Navigator.pop(context); // ✅ PENTING agar refresh
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    "SIMPAN STATUS",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        fontSize: 15),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow(String title, dynamic value,
-      {bool bold = false, bool big = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600)),
-          Text(
-            "$value",
-            style: TextStyle(
-              fontSize: big ? 18 : 15,
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
             ),
-          ),
-        ],
+
+            const SizedBox(height: 16),
+
+            if (next.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text(
+                  'Tidak ada perubahan status (order sudah final).',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Update Status', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: next.map((s) {
+                        return ElevatedButton(
+                          onPressed: _saving ? null : () => _updateStatus(s),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: _saving
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Text(_labelStatus(s)),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+
+            const Spacer(),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Kembali'),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }

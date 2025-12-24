@@ -13,245 +13,305 @@ class MitraOrdersPage extends StatefulWidget {
   State<MitraOrdersPage> createState() => _MitraOrdersPageState();
 }
 
-class _MitraOrdersPageState extends State<MitraOrdersPage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-
+class _MitraOrdersPageState extends State<MitraOrdersPage> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  /// ✅ Update status di provider
-  void _updateOrderStatus(
-      BuildContext context, int providerIndex, String newStatus) {
-    context.read<OrderProvider>().updateOrderStatus(
-          providerIndex,
-          newStatus,
-        );
+    Future.microtask(() {
+      if (!mounted) return;
+      context.read<OrderProvider>().loadPartnerOrders();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final orderProv = context.watch<OrderProvider>();
-
-    /// ✅ Ambil hanya pesanan milik mitra ini
-    final allMitraOrders =
-        orderProv.orders.where((o) => o.mitraId == "mitra").toList();
-
-    final newOrders = allMitraOrders
-        .where((o) => o.status == "menunggu mitra")
-        .toList();
-
-    final activeOrders = allMitraOrders
-        .where((o) => o.status != "menunggu mitra")
-        .toList();
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF6F8FF),
-
-      appBar: AppBar(
-        title: const Text(
-          "Pesanan Mitra",
-          style: TextStyle(fontWeight: FontWeight.bold),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F8FF),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          elevation: 0,
+          title: const Text('Pesanan Mitra'),
+          bottom: const TabBar(
+            labelColor: Colors.blueAccent,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.blueAccent,
+            tabs: [
+              Tab(text: 'Pesanan Baru'),
+              Tab(text: 'Aktif / Riwayat'),
+            ],
+          ),
         ),
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
-        centerTitle: true,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: "Notifikasi"),
-            Tab(text: "Pesanan Aktif"),
-          ],
-        ),
-      ),
+        body: Consumer<OrderProvider>(
+          builder: (context, prov, _) {
+            final orders = prov.orders;
 
-      body: TabBarView(
-        controller: _tabController,
-        children: [
+            if (prov.isLoading && orders.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          // ======================
-          // ✅ TAB 1 — PESANAN BARU
-          // ======================
-          newOrders.isEmpty
-              ? const Center(child: Text("Tidak ada pesanan baru"))
-              : ListView.builder(
+            if (prov.errorMessage != null && orders.isEmpty) {
+              return Center(
+                child: Padding(
                   padding: const EdgeInsets.all(16),
-                  itemCount: newOrders.length,
-                  itemBuilder: (context, index) {
-                    final order = newOrders[index];
-
-                    /// ✅ Index asli di provider
-                    final providerIndex =
-                        orderProv.orders.indexOf(order);
-
-                    return _orderCard(
-                      title: order.username,
-                      subtitle: order.carType,
-                      status: "Pesanan Baru",
-                      statusColor: Colors.orange,
-                      onTap: () =>
-                          _showConfirmDialog(context, providerIndex),
-                    );
-                  },
-                ),
-
-          // ======================
-          // ✅ TAB 2 — PESANAN AKTIF
-          // ======================
-          activeOrders.isEmpty
-              ? const Center(child: Text("Belum ada pesanan aktif"))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: activeOrders.length,
-                  itemBuilder: (context, index) {
-                    final order = activeOrders[index];
-
-                    final providerIndex =
-                        orderProv.orders.indexOf(order);
-
-                    return _orderCard(
-                      title: order.username,
-                      subtitle: order.carType,
-                      status: order.status,
-                      statusColor: order.status == "selesai"
-                          ? Colors.green
-                          : Colors.blue,
-                      onTap: () => _openDetail(
-                        context,
-                        order,
-                        providerIndex,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        prov.errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.black54),
                       ),
-                    );
-                  },
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: () => context.read<OrderProvider>().loadPartnerOrders(),
+                        child: const Text('Coba lagi'),
+                      )
+                    ],
+                  ),
                 ),
-        ],
-      ),
+              );
+            }
 
-      bottomNavigationBar: const BottomNavMitra(currentIndex: 1),
-    );
-  }
+            final newOrders = orders.where((o) => o.status == 'pending').toList();
+            final activeOrders = orders.where((o) => o.status != 'pending').toList();
 
-  // ===========================
-  // ✅ CARD UI
-  // ===========================
-  Widget _orderCard({
-    required String title,
-    required String subtitle,
-    required String status,
-    required Color statusColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12.withOpacity(0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(color: Colors.black54)),
-              ],
-            ),
-            Text(
-              status,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: statusColor,
+            return RefreshIndicator(
+              onRefresh: () => context.read<OrderProvider>().loadPartnerOrders(),
+              child: TabBarView(
+                children: [
+                  _listNewOrders(context, newOrders),
+                  _listActiveOrders(context, activeOrders),
+                ],
               ),
-            ),
-          ],
+            );
+          },
         ),
+        bottomNavigationBar: const BottomNavMitra(currentIndex: 1),
       ),
     );
   }
 
-  // ===========================
-  // ✅ DIALOG TERIMA PESANAN
-  // ===========================
-  void _showConfirmDialog(BuildContext context, int providerIndex) {
-    showDialog(
-      context: context,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text("Terima pesanan?"),
-          content:
-              const Text("Pesanan ini akan masuk ke Pesanan Aktif."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Batal"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
+  Widget _listNewOrders(BuildContext context, List<Order> orders) {
+    if (orders.isEmpty) {
+      return const Center(
+        child: Text(
+          'Tidak ada pesanan baru.',
+          style: TextStyle(color: Colors.black54),
+        ),
+      );
+    }
 
-                /// ✅ UBAH STATUS
-                _updateOrderStatus(
-                    context, providerIndex, "pengerjaan");
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: orders.length,
+      itemBuilder: (context, i) {
+        final o = orders[i];
+        final orderId = int.tryParse(o.bookingId) ?? 0;
 
-                /// ✅ PINDAH KE TAB AKTIF
-                _tabController.animateTo(1);
-              },
-              child: const Text("Terima"),
-            ),
-          ],
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12.withOpacity(0.06),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              )
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.person, color: Colors.blueAccent),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      o.title,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  const _StatusBadge(status: 'pending'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text('Jadwal: ${o.date} ${o.time}'),
+              const SizedBox(height: 4),
+              Text('Alamat: ${o.location}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 4),
+              Text('Plat: ${o.plateNumber.isEmpty ? '-' : o.plateNumber}'),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: orderId == 0
+                          ? null
+                          : () async {
+                              final res = await context.read<OrderProvider>().partnerReject(orderId);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(content: Text(res.message)));
+                              await context.read<OrderProvider>().loadPartnerOrders();
+                            },
+                      icon: const Icon(Icons.close, color: Colors.redAccent),
+                      label: const Text('Tolak', style: TextStyle(color: Colors.redAccent)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                      onPressed: orderId == 0
+                          ? null
+                          : () async {
+                              final res = await context.read<OrderProvider>().partnerAccept(orderId);
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context)
+                                  .showSnackBar(SnackBar(content: Text(res.message)));
+                              await context.read<OrderProvider>().loadPartnerOrders();
+                            },
+                      icon: const Icon(Icons.check, color: Colors.white),
+                      label: const Text('Terima', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              )
+            ],
+          ),
         );
       },
     );
   }
 
-  // ===========================
-  // ✅ BUKA DETAIL SERVICE MITRA
-  // ===========================
-  void _openDetail(
-      BuildContext context,
-      Order order,
-      int providerIndex,
-      ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => DetailServiceMitraPage(
-          providerIndex: providerIndex, // ✅ KUNCI UPDATE STATUS
-          username: order.username,
-          phoneNumber: order.phoneNumber,
-          bookingId: order.bookingId,
-          date: order.date,
-          time: order.time,
-          carType: order.carType,
-          price: order.price,
-          servicePrice: order.servicePrice,
-          tax: order.tax,
-          discount: order.discount,
-          address: order.location,
-          detailAddress: order.detailAddress,
-          plateNumber: order.plateNumber,
-          total: order.total,
+  Widget _listActiveOrders(BuildContext context, List<Order> orders) {
+    if (orders.isEmpty) {
+      return const Center(
+        child: Text(
+          'Belum ada pesanan aktif/riwayat.',
+          style: TextStyle(color: Colors.black54),
         ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: orders.length,
+      itemBuilder: (context, i) {
+        final o = orders[i];
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DetailServiceMitraPage(order: o)),
+            ).then((_) {
+              // refresh setelah balik
+              context.read<OrderProvider>().loadPartnerOrders();
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                )
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.local_car_wash, color: Colors.blueAccent),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        o.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('${o.date} ${o.time}', style: const TextStyle(color: Colors.black54)),
+                      const SizedBox(height: 4),
+                      Text(o.location, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                _StatusBadge(status: o.status),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case 'pending':
+        color = Colors.grey;
+        text = 'Menunggu';
+        break;
+      case 'accepted':
+        color = Colors.blue;
+        text = 'Diterima';
+        break;
+      case 'on_the_way':
+        color = Colors.orange;
+        text = 'Menuju';
+        break;
+      case 'in_progress':
+        color = Colors.orange;
+        text = 'Proses';
+        break;
+      case 'completed':
+        color = Colors.green;
+        text = 'Selesai';
+        break;
+      case 'rejected':
+        color = Colors.red;
+        text = 'Ditolak';
+        break;
+      case 'cancelled':
+        color = Colors.redAccent;
+        text = 'Batal';
+        break;
+      default:
+        color = Colors.grey;
+        text = status;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }

@@ -256,8 +256,14 @@ class _MapPickerPageState extends State<MapPickerPage> {
               onPressed: selectedPoint == null
                   ? null
                   : () {
-                      Navigator.pop(context,
-                          {"address": _fakeAddress(selectedPoint!)});
+                      Navigator.pop(
+                        context,
+                        {
+                          "address": _fakeAddress(selectedPoint!),
+                          "latitude": selectedPoint!.latitude,
+                          "longitude": selectedPoint!.longitude,
+                        },
+                      );
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueAccent,

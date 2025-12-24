@@ -227,6 +227,10 @@
 import 'package:flutter/material.dart';
 import 'package:carwashgo/features/auth/data/auth_api.dart';
 import 'package:carwashgo/features/auth/models/auth_response.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/order_provider.dart';
+import '../../providers/user_provider.dart';
 
 class LoginMitraPage extends StatefulWidget {
   const LoginMitraPage({super.key});
@@ -292,6 +296,21 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message)),
       );
+
+      // Simpan user ke provider
+      final u = res.user;
+      if (u != null) {
+        context.read<UserProvider>().setUser(
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone,
+              role: u.role,
+            );
+      }
+
+      // bersihkan cache order lama
+      context.read<OrderProvider>().clearOrders();
 
       Navigator.pushReplacementNamed(context, '/mitra-home');
     } else {
