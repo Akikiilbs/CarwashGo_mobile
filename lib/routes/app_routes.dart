@@ -45,6 +45,7 @@ import '../pages/mitra/mitra_profile_page.dart';
 import '../pages/mitra/mitra_income_page.dart';
 import '../pages/mitra/mitra_cars_page.dart';
 import '../pages/mitra/mitra_rating_page.dart';
+import '../pages/mitra/mitra_services_page.dart';
 
 // =====================
 // PAYMENT + QRIS
@@ -107,6 +108,8 @@ class AppRoutes {
     '/mitra-home': (_) => const HomeMitraPage(),
     '/mitra-orders': (_) => const MitraOrdersPage(),
     '/mitra-profile': (_) => const MitraProfilePage(),
+
+    '/mitra-services': (_) => const MitraServicesPage(),
 
     '/mitra-income': (_) => const MitraIncomePage(),
     '/mitra-cars': (_) => const MitraCarsPage(),

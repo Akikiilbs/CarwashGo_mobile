@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 
 // ================= PROVIDERS =================
 import 'providers/notification_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/review_provider.dart';
-import 'providers/mitra_provider.dart'; 
+import 'providers/mitra_provider.dart';
 import 'providers/station_provider.dart';
+import 'providers/partner_services_provider.dart';
 
 // ================= ROUTES =================
 import 'routes/app_routes.dart';
@@ -18,6 +21,25 @@ import 'core/theme/app_theme.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('🔥 FlutterError: ${details.exception}');
+    debugPrint('📌 Stack: ${details.stack}');
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('🔥 Unhandled error: $error');
+    debugPrint('📌 Stack: $stack');
+    return true;
+  };
+
+  runZonedGuarded(() {
+    runApp(const MyApp());
+  }, (error, stack) {
+    debugPrint('🔥 Zone error: $error');
+    debugPrint('📌 Stack: $stack');
+  });
+
   runApp(
     MultiProvider(
       providers: [
@@ -25,7 +47,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
-        ChangeNotifierProvider(create: (_) => MitraProvider()), 
+        ChangeNotifierProvider(create: (_) => MitraProvider()),
+        ChangeNotifierProvider(create: (_) => PartnerServicesProvider()),
         ChangeNotifierProvider(create: (_) => StationProvider()),
       ],
       child: const MyApp(),

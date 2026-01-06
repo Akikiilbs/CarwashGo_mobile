@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DioClient {
@@ -11,13 +12,14 @@ class DioClient {
   DioClient._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl:
-            'https://f0e6987d4f7b.ngrok-free.app/api/v1',
+        baseUrl: 'https://d1974029aca2.ngrok-free.app/api/v1',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
-        headers: {
+        headers: const {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
+          'User-Agent': 'okhttp',
         },
       ),
     );
@@ -30,21 +32,30 @@ class DioClient {
             if (token != null && token.isNotEmpty) {
               options.headers['Authorization'] = 'Bearer $token';
             }
-
-            print('➡️ [${options.method}] ${options.uri}');
           } catch (e) {
-            print('❌ Token error: $e');
+            debugPrint('❌ [DIO] Token read error: $e');
           }
 
+          debugPrint('➡️ [DIO] ${options.method} ${options.uri}');
+          debugPrint('Headers: ${options.headers}');
+          debugPrint('Query: ${options.queryParameters}');
+          debugPrint('Data: ${options.data}');
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          print('✅ [${response.statusCode}] ${response.requestOptions.uri}');
+          debugPrint(
+              '✅ [DIO] ${response.statusCode} ${response.requestOptions.uri}');
+          debugPrint('Response: ${response.data}');
           return handler.next(response);
         },
         onError: (DioException e, handler) {
-          print('❌ [${e.response?.statusCode}] ${e.requestOptions.uri}');
-          print('Message: ${e.message}');
+          debugPrint(
+              '❌ [DIO] ERROR ${e.requestOptions.method} ${e.requestOptions.uri}');
+          debugPrint('Type: ${e.type}');
+          debugPrint('Message: ${e.message}');
+          debugPrint('Status: ${e.response?.statusCode}');
+          debugPrint('Response: ${e.response?.data}');
+          debugPrint('Stack: ${e.stackTrace}');
           return handler.next(e);
         },
       ),
