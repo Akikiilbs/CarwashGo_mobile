@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+// ✅ Gate (cek onboarding_done -> langsung role / onboarding)
+import '../pages/app_gate_page.dart';
+
 // =====================
 // SPLASH & ONBOARDING (pastikan file ada di project)
 // =====================
@@ -55,7 +58,13 @@ import '../pages/payment/qris_page.dart';
 class AppRoutes {
   static final routes = <String, WidgetBuilder>{
     // =====================
-    // MAIN SYSTEM
+    // ✅ APP ENTRY
+    // =====================
+    '/': (_) => const AppGatePage(),
+    '/gate': (_) => const AppGatePage(),
+
+    // =====================
+    // SPLASH & ONBOARDING
     // =====================
     '/splash': (_) => const SplashPage(),
     '/onboarding': (_) => const OnboardingPage(),
@@ -103,14 +112,12 @@ class AppRoutes {
     '/notification': (_) => const NotificationPage(),
 
     // =====================
-    // HOME MITRA + NAVIGATION
+    // HOME MITRA
     // =====================
     '/mitra-home': (_) => const HomeMitraPage(),
     '/mitra-orders': (_) => const MitraOrdersPage(),
     '/mitra-profile': (_) => const MitraProfilePage(),
-
     '/mitra-services': (_) => const MitraServicesPage(),
-
     '/mitra-income': (_) => const MitraIncomePage(),
     '/mitra-cars': (_) => const MitraCarsPage(),
     '/mitra-rating': (_) => const MitraRatingPage(),

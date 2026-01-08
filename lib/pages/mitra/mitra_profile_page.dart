@@ -7,6 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:carwashgo/features/auth/data/auth_api.dart';
+import 'package:carwashgo/core/network/dio_client.dart';
+import 'package:carwashgo/features/partner/data/partner_api.dart';
+import '../../pages/map/map_picker_page.dart';
 import '../../pages/navigation/bottom_nav_mitra.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/user_provider.dart';
@@ -27,6 +30,10 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
   bool _uploadingPhoto = false;
 
   final _authApi = AuthApi();
+
+  final _partnerApi = PartnerApi(DioClient().dio);
+
+  bool _updatingOutletLocation = false;
 
   @override
   void initState() {
@@ -242,7 +249,114 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  
+  Future<void> _changeOutletLocation() async {
+    final mitra = context.read<MitraProvider>();
+    final user = context.read<UserProvider>();
+
+    // guard: minimal data
+    final phoneToSend =
+        user.phone.isNotEmpty ? user.phone : (mitra.phone.isNotEmpty ? mitra.phone : "");
+
+    if (mitra.businessName.isEmpty || mitra.alamat.isEmpty || phoneToSend.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Lengkapi Nama Usaha, Alamat Usaha, dan Nomor Telepon terlebih dahulu sebelum mengubah lokasi.",
+          ),
+        ),
+      );
+      return;
+    }
+
+    // open map picker
+    final picked = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MapPickerPage()),
+    );
+
+    if (!mounted) return;
+    if (picked == null || picked is! Map) return;
+
+    final newLat = (picked["latitude"] as num).toDouble();
+    final newLng = (picked["longitude"] as num).toDouble();
+    final newAddress = (picked["address"] ?? "").toString();
+
+    final oldLat = mitra.latitude;
+    final oldLng = mitra.longitude;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Konfirmasi Perubahan Lokasi"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Lokasi lama: ${oldLat?.toStringAsFixed(5) ?? "-"}, ${oldLng?.toStringAsFixed(5) ?? "-"}"),
+              const SizedBox(height: 6),
+              Text("Lokasi baru: ${newLat.toStringAsFixed(5)}, ${newLng.toStringAsFixed(5)}"),
+              if (newAddress.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text("Alamat (perkiraan): $newAddress"),
+              ],
+              const SizedBox(height: 12),
+              const Text("Simpan perubahan lokasi outlet?"),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Batal"),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Simpan"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _updatingOutletLocation = true);
+
+    try {
+      final profile = await _partnerApi.updateProfile(
+        businessName: mitra.businessName,
+        address: mitra.alamat,
+        phone: phoneToSend,
+        latitude: newLat,
+        longitude: newLng,
+      );
+
+      // update provider agar UI langsung berubah
+      context.read<MitraProvider>().setFromApi(
+            businessName: profile.businessName,
+            alamat: profile.address,
+            latitude: profile.latitude,
+            longitude: profile.longitude,
+            outletPhotoUrl: mitra.outletPhotoUrl,
+          );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Lokasi outlet berhasil diperbarui.")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal memperbarui lokasi: $e")),
+      );
+    } finally {
+      if (mounted) setState(() => _updatingOutletLocation = false);
+    }
+  }
+
+Widget build(BuildContext context) {
     final user = context.watch<UserProvider>();
     final mitra = context.watch<MitraProvider>();
 
@@ -324,6 +438,28 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
             _infoTile(Icons.location_on, "Alamat Usaha", alamat),
             const SizedBox(height: 10),
             _infoTile(Icons.my_location, "Koordinat Outlet", koordinat),
+
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: OutlinedButton.icon(
+                icon: _updatingOutletLocation
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.edit_location_alt),
+                label: Text(
+                  _updatingOutletLocation
+                      ? "Memperbarui lokasi..."
+                      : "Ubah Lokasi Outlet",
+                ),
+                onPressed:
+                    _updatingOutletLocation ? null : _changeOutletLocation,
+              ),
+            ),
             const SizedBox(height: 22),
 
             // ====== CRUD Layanan Mitra ======

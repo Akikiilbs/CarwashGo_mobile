@@ -7,8 +7,7 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage>
-    with TickerProviderStateMixin {
+class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late AnimationController _logoController;
   late Animation<double> _logoOpacity;
   late Animation<double> _logoScale;
@@ -116,8 +115,8 @@ class _SplashPageState extends State<SplashPage>
                 Navigator.pushReplacementNamed(context, '/onboarding');
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 14, horizontal: 40),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 40),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(30),

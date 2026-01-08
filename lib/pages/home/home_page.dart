@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 
 import '../../core/network/dio_client.dart';
 import '../navigation/bottom_nav.dart';
-import '../booking/booking_page.dart';
+import '../booking/detail_service_page.dart';
 
 /// Home customer: menampilkan layanan mitra yang tersedia.
 /// - Jika izin lokasi diberikan, daftar akan diurutkan berdasarkan jarak (nearest first)
@@ -264,11 +264,15 @@ class _HomePageState extends State<HomePage> {
                 ] else if (_services.isEmpty) ...[
                   _buildEmptyCard(),
                 ] else ...[
-                  Column(
-                    children: _services.map((item) {
-                      return _buildServiceCard(context, item);
-                    }).toList(),
-                  ),
+                  Builder(builder: (_) {
+                    final stations = _groupStations(_services);
+                    if (stations.isEmpty) return _buildEmptyCard();
+                    return Column(
+                      children: stations
+                          .map((s) => _buildStationCard(context, s))
+                          .toList(),
+                    );
+                  }),
                 ],
               ],
             ),
@@ -349,27 +353,88 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(14),
       ),
       child: const Text(
-        'Belum ada layanan tersedia. Jalankan seeder DummyPartnerSeeder + DummyOrderSeeder (layanan mitra).',
+        'Belumn ada layanan tersedia di sekitar Anda.',
         style: TextStyle(fontSize: 13),
       ),
     );
   }
 
-  Widget _buildServiceCard(BuildContext context, Map<String, dynamic> item) {
-    final partner = (item['partner'] as Map?)?.cast<String, dynamic>();
-    final service = (item['service'] as Map?)?.cast<String, dynamic>();
-    final vt = (item['vehicle_type'] as Map?)?.cast<String, dynamic>();
-    final distance = item['distance_km'];
+  /// Group marketplace items menjadi 1 kartu per mitra (station).
+  List<_StationVM> _groupStations(List<Map<String, dynamic>> items) {
+    final Map<int, _StationVM> map = {};
 
-    final partnerName = partner?['business_name']?.toString() ?? '-';
-    final partnerAddress = partner?['address']?.toString() ?? '-';
-    final serviceName = service?['name']?.toString() ?? '-';
-    final vehicleTypeName = vt?['name']?.toString() ?? '-';
-    final price = (item['price'] ?? 0).toString();
+    for (final it in items) {
+      final partner = (it['partner'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
+      final pidRaw = it['partner_id'] ?? partner['id'];
+      final pid = int.tryParse(pidRaw?.toString() ?? '') ?? 0;
+      if (pid == 0) continue;
 
-    final distanceText = (distance == null)
+      final priceRaw = it['price'];
+      final price = (priceRaw is num)
+          ? priceRaw.toInt()
+          : int.tryParse(priceRaw?.toString() ?? '') ?? 0;
+
+      final distanceRaw = it['distance_km'];
+      final distanceKm = (distanceRaw is num)
+          ? distanceRaw.toDouble()
+          : double.tryParse(distanceRaw?.toString() ?? '') ?? 0.0;
+
+      final service = (it['service'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
+      final vt = (it['vehicle_type'] as Map?)?.cast<String, dynamic>() ??
+          <String, dynamic>{};
+
+      final serviceName = service['name']?.toString();
+      final vehicleTypeName = vt['name']?.toString();
+
+      final vm = map.putIfAbsent(pid, () {
+        final name = partner['business_name']?.toString() ??
+            partner['name']?.toString() ??
+            '-';
+        final addr = partner['address']?.toString() ?? '-';
+        return _StationVM(
+          partnerId: pid,
+          partner: partner,
+          name: name,
+          address: addr,
+          minPrice: price == 0 ? 999999999 : price,
+          distanceKm: distanceKm == 0 ? null : distanceKm,
+          offers: [],
+        );
+      });
+
+      vm.offers.add(Map<String, dynamic>.from(it));
+      if (price > 0 && price < vm.minPrice) vm.minPrice = price;
+      if (vm.distanceKm == null && distanceKm > 0) vm.distanceKm = distanceKm;
+
+      if (serviceName != null && serviceName.isNotEmpty)
+        vm.services.add(serviceName);
+      if (vehicleTypeName != null && vehicleTypeName.isNotEmpty)
+        vm.vehicleTypes.add(vehicleTypeName);
+    }
+
+    final list = map.values.toList();
+    // Urutkan terdekat kalau ada
+    list.sort((a, b) {
+      final da = a.distanceKm ?? 1e18;
+      final db = b.distanceKm ?? 1e18;
+      return da.compareTo(db);
+    });
+    return list;
+  }
+
+  Widget _buildStationCard(BuildContext context, _StationVM station) {
+    final distanceText = (station.distanceKm == null)
         ? null
-        : '${(distance as num).toStringAsFixed(1)} km';
+        : '${station.distanceKm!.toStringAsFixed(1)} km';
+
+    final vehicleLabel = station.vehicleTypes.isEmpty
+        ? 'Tipe: -'
+        : 'Tipe: ${station.vehicleTypes.take(2).join(', ')}${station.vehicleTypes.length > 2 ? '…' : ''}';
+
+    final minPriceText =
+        (station.minPrice == 999999999) ? '-' : station.minPrice.toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -396,17 +461,10 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  serviceName,
+                  station.name,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  partnerName,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -416,33 +474,36 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        partnerAddress,
+                        station.address,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 13),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
                   runSpacing: 6,
                   children: [
-                    _chip('Tipe: $vehicleTypeName'),
-                    _chip('Rp $price'),
+                    _chip(vehicleLabel),
+                    _chip('Mulai Rp $minPriceText'),
                     if (distanceText != null) _chip(distanceText),
                   ],
-                )
+                ),
               ],
             ),
           ),
           TextButton(
             onPressed: () {
-              // ✅ Flow customer rapi: Home (marketplace) -> Booking (langsung bawa service yang dipilih)
+              // Flow customer: Home -> Detail Service -> Booking
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => BookingPage(serviceItem: item),
+                  builder: (_) => DetailServicePage(
+                    partner: station.partner,
+                    offers: station.offers,
+                  ),
                 ),
               );
             },
@@ -467,4 +528,28 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+}
+
+class _StationVM {
+  final int partnerId;
+  final Map<String, dynamic> partner;
+  final String name;
+  final String address;
+  final List<Map<String, dynamic>> offers;
+
+  double? distanceKm;
+  int minPrice;
+
+  final Set<String> vehicleTypes = {};
+  final Set<String> services = {};
+
+  _StationVM({
+    required this.partnerId,
+    required this.partner,
+    required this.name,
+    required this.address,
+    required this.offers,
+    required this.minPrice,
+    required this.distanceKm,
+  });
 }

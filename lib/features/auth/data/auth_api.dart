@@ -383,4 +383,30 @@ class AuthApi {
       return AuthResponse(status: 'error', message: 'Terjadi kesalahan');
     }
   }
+
+  Future<Map<String, dynamic>> updatePartnerCoordinates({
+    required double latitude,
+    required double longitude,
+  }) async {
+    final dio = DioClient().dio;
+
+    final Response res = await dio.put(
+      '/partner/profile',
+      data: {
+        'latitude': latitude,
+        'longitude': longitude,
+      },
+    );
+
+    if (res.data is Map<String, dynamic>) {
+      return res.data as Map<String, dynamic>;
+    }
+    // fallback kalau response bukan map
+    return {
+      'success': true,
+      'status': 'success',
+      'message': 'Koordinat diperbarui',
+      'data': res.data,
+    };
+  }
 }

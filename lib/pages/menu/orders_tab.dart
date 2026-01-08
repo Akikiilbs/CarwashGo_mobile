@@ -5,7 +5,7 @@ import '../../providers/order_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../models/review_model.dart';
 
-import '../booking/detail_service_page.dart';
+import '../booking/detail_order_page.dart';
 import '../review/review_popup.dart';
 
 class OrdersTab extends StatefulWidget {
@@ -54,7 +54,8 @@ class _OrdersTabState extends State<OrdersTab> {
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: () => context.read<OrderProvider>().loadCustomerOrders(),
+                onPressed: () =>
+                    context.read<OrderProvider>().loadCustomerOrders(),
                 child: const Text('Coba lagi'),
               )
             ],
@@ -69,7 +70,9 @@ class _OrdersTabState extends State<OrdersTab> {
 
       try {
         final selesaiOrder = orders.firstWhere(
-          (o) => o.status == "completed" && !_reviewedOrderIds.contains(o.bookingId),
+          (o) =>
+              o.status == "completed" &&
+              !_reviewedOrderIds.contains(o.bookingId),
         );
 
         _popupShown = true;
@@ -143,149 +146,146 @@ class _OrdersTabState extends State<OrdersTab> {
         padding: const EdgeInsets.all(16),
         itemCount: orders.length,
         itemBuilder: (context, index) {
-        final order = orders[index];
+          final order = orders[index];
 
-        // ✅ STATUS BADGE COLOR
-        Color statusColor;
-        String statusText;
+          // ✅ STATUS BADGE COLOR
+          Color statusColor;
+          String statusText;
 
-        switch (order.status) {
-          case "pending":
-            statusColor = Colors.grey;
-            statusText = "Menunggu Konfirmasi";
-            break;
-          case "accepted":
-            statusColor = Colors.blue;
-            statusText = "Diterima";
-            break;
-          case "on_the_way":
-            statusColor = Colors.orange;
-            statusText = "Menuju Lokasi";
-            break;
-          case "in_progress":
-            statusColor = Colors.orange;
-            statusText = "Dalam Pengerjaan";
-            break;
-          case "completed":
-            statusColor = Colors.green;
-            statusText = _reviewedOrderIds.contains(order.bookingId)
-                ? "Selesai • Sudah Diulas"
-                : "Selesai";
-            break;
-          case "rejected":
-            statusColor = Colors.red;
-            statusText = "Ditolak";
-            break;
-          case "cancelled":
-            statusColor = Colors.redAccent;
-            statusText = "Dibatalkan";
-            break;
-          default:
-            statusColor = Colors.grey;
-            statusText = order.status;
-        }
+          switch (order.status) {
+            case "pending":
+              statusColor = Colors.grey;
+              statusText = "Menunggu Konfirmasi";
+              break;
+            case "accepted":
+              statusColor = Colors.blue;
+              statusText = "Diterima";
+              break;
+            case "on_the_way":
+              statusColor = Colors.orange;
+              statusText = "Menuju Lokasi";
+              break;
+            case "in_progress":
+              statusColor = Colors.orange;
+              statusText = "Dalam Pengerjaan";
+              break;
+            case "completed":
+              statusColor = Colors.green;
+              statusText = _reviewedOrderIds.contains(order.bookingId)
+                  ? "Selesai • Sudah Diulas"
+                  : "Selesai";
+              break;
+            case "rejected":
+              statusColor = Colors.red;
+              statusText = "Ditolak";
+              break;
+            case "cancelled":
+              statusColor = Colors.redAccent;
+              statusText = "Dibatalkan";
+              break;
+            default:
+              statusColor = Colors.grey;
+              statusText = order.status;
+          }
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => DetailServicePage(
-                  username: order.username,
-                  phoneNumber: order.phoneNumber,
-                  bookingId: order.bookingId,
-                  date: order.date,
-                  time: order.time,
-                  carType: order.carType,
-                  price: order.price,
-                  servicePrice: order.servicePrice,
-                  tax: order.tax,
-                  discount: order.discount,
-                  address: order.location,
-                  detailAddress: order.detailAddress,
-                  plateNumber: order.plateNumber,
-                  total: order.total,
-                  showDelete: false,
-                  fromOrderPage: true,
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailOrderPage(
+                    username: order.username,
+                    phoneNumber: order.phoneNumber,
+                    bookingId: order.bookingId,
+                    date: order.date,
+                    time: order.time,
+                    carType: order.carType,
+                    price: order.price,
+                    servicePrice: order.servicePrice,
+                    tax: order.tax,
+                    discount: order.discount,
+                    address: order.location,
+                    detailAddress: order.detailAddress,
+                    plateNumber: order.plateNumber,
+                    total: order.total,
+                    showDelete: false,
+                    fromOrderPage: true,
+                  ),
                 ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black12.withOpacity(0.08),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.asset(
-                    order.image,
-                    width: 60,
-                    height: 60,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-
-                const SizedBox(width: 12),
-
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        order.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(order.date,
-                          style: const TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 4),
-                      Text(
-                        order.location,
-                        style: const TextStyle(color: Colors.black54),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 4,
-                    horizontal: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      order.image,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
                     ),
                   ),
-                )
-              ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(order.date,
+                            style: const TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 4),
+                        Text(
+                          order.location,
+                          style: const TextStyle(color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 4,
+                      horizontal: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      statusText,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                ],
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );

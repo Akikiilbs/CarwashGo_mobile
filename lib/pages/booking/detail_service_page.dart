@@ -1,295 +1,285 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
-import '../payment/payment_page.dart';
-import '../../providers/order_provider.dart';
-import '../../models/order_model.dart';
+import '../booking/booking_page.dart';
 
-class DetailServicePage extends StatelessWidget {
-  final String username;
-  final String phoneNumber;
-  final String bookingId;
-  final String date;
-  final String time;
-  final String carType;
-  final int price;
-  final int servicePrice;
-  final int tax;
-  final int discount;
-  final String address;
-  final String detailAddress;
-  final String plateNumber;
-  final int total;
-
-  final bool showDelete;
-  final bool fromOrderPage;
+/// Detail station/service untuk customer.
+/// Menampilkan informasi mitra (station) + daftar paket (service x vehicle type) dari backend marketplace.
+/// Kalau ada data yang belum tersedia dari backend, ditampilkan sebagai dummy.
+class DetailServicePage extends StatefulWidget {
+  final Map<String, dynamic> partner;
+  final List<Map<String, dynamic>> offers;
 
   const DetailServicePage({
     super.key,
-    required this.username,
-    required this.phoneNumber,
-    required this.bookingId,
-    required this.date,
-    required this.time,
-    required this.carType,
-    required this.price,
-    required this.servicePrice,
-    required this.tax,
-    required this.discount,
-    required this.address,
-    required this.detailAddress,
-    required this.plateNumber,
-    required this.total,
-    this.showDelete = true,
-    this.fromOrderPage = false,
+    required this.partner,
+    required this.offers,
   });
 
   @override
+  State<DetailServicePage> createState() => _DetailServicePageState();
+}
+
+class _DetailServicePageState extends State<DetailServicePage> {
+  int? _selectedIndex;
+
+  @override
   Widget build(BuildContext context) {
-    final orderProvider = context.read<OrderProvider>();
+    final partner = widget.partner;
+    final name = partner['business_name']?.toString() ??
+        partner['name']?.toString() ??
+        '-';
+    final address = partner['address']?.toString() ?? '-';
+
+    // Dummy (karena backend belum tentu menyediakan)
+    final rating = partner['rating']?.toString() ?? '4.7 (dummy)';
+    final openHours =
+        partner['open_hours']?.toString() ?? '08:00 - 18:00 (dummy)';
+    final description = partner['description']?.toString() ??
+        'Layanan cuci mobil di lokasi Anda. Pilih paket, lalu isi data booking. (dummy)';
+
+    final offers = List<Map<String, dynamic>>.from(widget.offers);
+    // sort by price asc
+    offers.sort((a, b) {
+      final pa = (a['price'] is num)
+          ? (a['price'] as num).toDouble()
+          : double.tryParse(a['price']?.toString() ?? '') ?? 0;
+      final pb = (b['price'] is num)
+          ? (b['price'] as num).toDouble()
+          : double.tryParse(b['price']?.toString() ?? '') ?? 0;
+      return pa.compareTo(pb);
+    });
+
+    final selectedOffer = (_selectedIndex != null &&
+            _selectedIndex! >= 0 &&
+            _selectedIndex! < offers.length)
+        ? offers[_selectedIndex!]
+        : null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE5F1FF),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE5F1FF),
+        backgroundColor: Colors.white,
         elevation: 0,
-        centerTitle: true,
         title: const Text(
-          "Detail Service",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
-          ),
+          'Detail Service',
+          style:
+              TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _infoRow("Nama Pengguna", username),
-              _infoRow("Nomor Telepon", phoneNumber),
-              _infoRow("Booking ID", bookingId),
-              _infoRow("Tanggal", date),
-              _infoRow("Jam", time),
-
-              const SizedBox(height: 12),
-              const Divider(),
-
-              _infoRow("Jenis Mobil", carType),
-              _infoRow("Plat Nomor", plateNumber),
-
-              const SizedBox(height: 12),
-              const Divider(),
-
-              _addressCard(address, detailAddress),
-
-              const Divider(),
-
-              _infoRow("Harga Mobil", "Rp $price"),
-              _infoRow("Harga Layanan", "Rp $servicePrice"),
-              _infoRow("Pajak", "Rp $tax"),
-              _infoRow("Diskon", "$discount%"),
-
-              const Divider(),
-
-              _infoRow("Total", "Rp $total", bold: true, big: true),
-
-              const SizedBox(height: 20),
-
-              Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Station
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5F1FF),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (showDelete)
-                    SizedBox(
-                      height: 45,
-                      width: 120,
-                      child: OutlinedButton(
-                        onPressed: () {},
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.red, width: 1.4),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          "DELETE",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  if (showDelete) const SizedBox(width: 10),
-
-                  Expanded(
-                    child: SizedBox(
-                      height: 45,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (fromOrderPage) {
-                            Navigator.pop(context);
-                          } else {
-                            // ================================
-                            // ✅ TAMBAHKAN PESANAN KE MITRA
-                            // ================================
-
-                            final newOrder = Order(
-                              mitraId: "mitra", // ✅ WAJIB: ID MITRA YANG DITUJU
-                              title: username,
-                              date: date,
-                              time: time,
-                              status: "Pesanan Baru",
-                              image: "assets/images/on1.png",
-                              location: address,
-                              detailAddress: detailAddress,
-                              plateNumber: plateNumber,
-                              username: username,
-                              phoneNumber: phoneNumber,
-                              bookingId: bookingId,
-                              carType: carType,
-                              price: price,
-                              servicePrice: servicePrice,
-                              tax: tax,
-                              discount: discount,
-                              total: total,
-                            );
-
-
-                            orderProvider.addOrder(newOrder);
-
-                            // ================================
-                            // ✅ LANJUT KE PAYMENT (TETAP)
-                            // ================================
-
-                            final bookingData = {
-                              "username": username,
-                              "phoneNumber": phoneNumber,
-                              "bookingId": bookingId,
-                              "date": date,
-                              "time": time,
-                              "carType": carType,
-                              "price": price,
-                              "servicePrice": servicePrice,
-                              "tax": tax,
-                              "discount": discount,
-                              "address": address,
-                              "detailAddress": detailAddress,
-                              "plateNumber": plateNumber,
-                              "total": total,
-                            };
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PaymentPage(
-                                  bookingData: bookingData,
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Text(
-                          "CONFIRM",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/images/on1.png',
+                      width: 74,
+                      height: 74,
+                      fit: BoxFit.cover,
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded,
+                                size: 16, color: Colors.blueAccent),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                address,
+                                style: const TextStyle(fontSize: 13),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _chip('⭐ $rating'),
+                            _chip('🕒 $openHours'),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
                 ],
-              )
-            ],
-          ),
+              ),
+            ),
+
+            const SizedBox(height: 14),
+            Text(
+              description,
+              style: const TextStyle(fontSize: 13, color: Colors.black87),
+            ),
+
+            const SizedBox(height: 18),
+            const Text(
+              'Pilih Paket',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+
+            if (offers.isEmpty)
+              _emptyOffers()
+            else
+              Column(
+                children: List.generate(offers.length, (i) {
+                  final it = offers[i];
+                  final service =
+                      (it['service'] as Map?)?.cast<String, dynamic>() ?? {};
+                  final vt =
+                      (it['vehicle_type'] as Map?)?.cast<String, dynamic>() ??
+                          {};
+                  final serviceName =
+                      service['name']?.toString() ?? 'Layanan (dummy)';
+                  final vehicleTypeName =
+                      vt['name']?.toString() ?? 'Tipe (dummy)';
+                  final price = it['price']?.toString() ?? '-';
+
+                  final selected = _selectedIndex == i;
+
+                  return InkWell(
+                    onTap: () => setState(() => _selectedIndex = i),
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? Colors.blue.withOpacity(0.08)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected ? Colors.blueAccent : Colors.black12,
+                          width: selected ? 1.2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Radio<int>(
+                            value: i,
+                            groupValue: _selectedIndex,
+                            onChanged: (v) =>
+                                setState(() => _selectedIndex = v),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  serviceName,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Tipe: $vehicleTypeName',
+                                  style: const TextStyle(
+                                      fontSize: 13, color: Colors.black54),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Rp $price',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+
+            const SizedBox(height: 18),
+
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: selectedOffer == null
+                    ? null
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                BookingPage(serviceItem: selectedOffer),
+                          ),
+                        );
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text(
+                  'Book Now',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _infoRow(String title, dynamic value,
-      {bool bold = false, bool big = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, color: Colors.black87)),
-          Text(
-            "$value",
-            style: TextStyle(
-              fontSize: big ? 18 : 15,
-              fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-              color: Colors.black87,
-            ),
-          ),
-        ],
+  Widget _chip(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.black12),
       ),
+      child: Text(text,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 
-  Widget _addressCard(String mainAddress, String detail) {
+  Widget _emptyOffers() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(14),
-      margin: const EdgeInsets.only(top: 10, bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFFF7F7F7),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black12),
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.location_on, color: Colors.blueAccent, size: 26),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Alamat Lengkap",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text("$mainAddress\n$detail"),
-              ],
-            ),
-          ),
-        ],
-      ),
+      child: const Text('Belum ada paket layanan. (dummy)',
+          style: TextStyle(color: Colors.black54)),
     );
   }
 }
