@@ -83,7 +83,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               child: FadeTransition(
                 opacity: _textOpacity,
                 child: const Text(
-                  "CarWashGo",
+                  "CarwashGo",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -97,7 +97,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             FadeTransition(
               opacity: _textOpacity,
               child: const Text(
-                "Professional Car Cleaning Service",
+                "Solusi Cuci Mobil Praktis dan Cepat tanpa harus datang ke tempat",
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.white70,

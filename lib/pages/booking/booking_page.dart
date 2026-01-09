@@ -28,6 +28,8 @@ class _BookingPageState extends State<BookingPage> {
   double? _lat;
   double? _lng;
 
+  late DateTime _selectedMonth;
+  int _selectedDay = 1;
   late DateTime _selectedDate;
   String _selectedTime = '09:00';
 
@@ -42,7 +44,10 @@ class _BookingPageState extends State<BookingPage> {
   @override
   void initState() {
     super.initState();
-    _selectedDate = DateTime.now().add(const Duration(days: 1));
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    _selectedMonth = DateTime(tomorrow.year, tomorrow.month, 1);
+    _selectedDay = tomorrow.day;
+    _selectedDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
   }
 
   @override
@@ -55,13 +60,30 @@ class _BookingPageState extends State<BookingPage> {
     super.dispose();
   }
 
-  List<DateTime> get _next7Days {
-    final today = DateTime.now();
-    return List.generate(7, (i) {
-      final d = today.add(Duration(days: i));
-      return DateTime(d.year, d.month, d.day);
+    static const List<String> _monthNamesId = [
+    'Januari','Februari','Maret','April','Mei','Juni',
+    'Juli','Agustus','September','Oktober','November','Desember',
+  ];
+
+  String _monthLabel(DateTime m) => '${_monthNamesId[m.month - 1]} ${m.year}';
+
+  List<DateTime> get _next6Months {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month, 1);
+    return List.generate(6, (i) {
+      final d = DateTime(start.year, start.month + i, 1);
+      return d;
     });
   }
+
+  int get _daysInSelectedMonth {
+    final y = _selectedMonth.year;
+    final m = _selectedMonth.month;
+    // day 0 of next month = last day of current month
+    return DateTime(y, m + 1, 0).day;
+  }
+
+  List<int> get _daysList => List.generate(_daysInSelectedMonth, (i) => i + 1);
 
   List<String> get _timeSlots => const [
         '08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00',
@@ -203,22 +225,63 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 10),
 
-            const Text('Jadwal'),
+                        const Text('Jadwal', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 10),
+
+            // Bulan
+            const Text('Bulan', style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
-              children: _next7Days.map((d) {
-                final selected = d == _selectedDate;
+              runSpacing: 8,
+              children: _next6Months.map((m) {
+                final selected = (m.year == _selectedMonth.year && m.month == _selectedMonth.month);
                 return ChoiceChip(
-                  label: Text('${d.day}/${d.month}'),
+                  label: Text(_monthLabel(m)),
                   selected: selected,
-                  onSelected: (_) => setState(() => _selectedDate = d),
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedMonth = DateTime(m.year, m.month, 1);
+                      final maxDay = _daysInSelectedMonth;
+                      if (_selectedDay > maxDay) _selectedDay = maxDay;
+                      _selectedDate = DateTime(_selectedMonth.year, _selectedMonth.month, _selectedDay);
+                    });
+                  },
                 );
               }).toList(),
             ),
-            const SizedBox(height: 10),
+
+            const SizedBox(height: 12),
+
+            // Tanggal
+            const Text('Tanggal', style: TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
+              children: _daysList.map((day) {
+                final selected = day == _selectedDay;
+                return ChoiceChip(
+                  label: Text(day.toString()),
+                  selected: selected,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedDay = day;
+                      _selectedDate = DateTime(_selectedMonth.year, _selectedMonth.month, _selectedDay);
+                    });
+                  },
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Jam
+            const Text('Jam', style: TextStyle(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: _timeSlots.map((t) {
                 final selected = t == _selectedTime;
                 return ChoiceChip(
@@ -230,11 +293,12 @@ class _BookingPageState extends State<BookingPage> {
             ),
 
             const SizedBox(height: 16),
-            TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'Plat Nomor')),
-            TextField(controller: _brandController, decoration: const InputDecoration(labelText: 'Merk (opsional)')),
-            TextField(controller: _modelController, decoration: const InputDecoration(labelText: 'Model (opsional)')),
-            TextField(controller: _colorController, decoration: const InputDecoration(labelText: 'Warna (opsional)')),
-            TextField(controller: _notesController, decoration: const InputDecoration(labelText: 'Catatan (opsional)')),
+const SizedBox(height: 16),
+            TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'Nomor Plat')),
+            TextField(controller: _brandController, decoration: const InputDecoration(labelText: 'Merk Mobil')),
+            TextField(controller: _modelController, decoration: const InputDecoration(labelText: 'Model Mobil')),
+            TextField(controller: _colorController, decoration: const InputDecoration(labelText: 'Warna Mobil (Opsiional)')),
+            TextField(controller: _notesController, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
 
             const SizedBox(height: 18),
             SizedBox(
