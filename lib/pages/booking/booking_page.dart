@@ -5,8 +5,6 @@ import '../../features/order/data/order_api.dart';
 import '../../features/order/models/simple_api_response.dart';
 import '../../providers/order_provider.dart';
 import '../map/map_picker_page.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../../features/payment/models/payment_model.dart';
 
 class BookingPage extends StatefulWidget {
   /// serviceItem dari marketplace: {
@@ -30,8 +28,6 @@ class _BookingPageState extends State<BookingPage> {
   double? _lat;
   double? _lng;
 
-  late DateTime _selectedMonth;
-  int _selectedDay = 1;
   late DateTime _selectedDate;
   String _selectedTime = '09:00';
 
@@ -46,10 +42,7 @@ class _BookingPageState extends State<BookingPage> {
   @override
   void initState() {
     super.initState();
-    final tomorrow = DateTime.now().add(const Duration(days: 1));
-    _selectedMonth = DateTime(tomorrow.year, tomorrow.month, 1);
-    _selectedDay = tomorrow.day;
-    _selectedDate = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+    _selectedDate = DateTime.now().add(const Duration(days: 1));
   }
 
   @override
@@ -62,40 +55,13 @@ class _BookingPageState extends State<BookingPage> {
     super.dispose();
   }
 
-  static const List<String> _monthNamesId = [
-    'Januari',
-    'Februari',
-    'Maret',
-    'April',
-    'Mei',
-    'Juni',
-    'Juli',
-    'Agustus',
-    'September',
-    'Oktober',
-    'November',
-    'Desember',
-  ];
-
-  String _monthLabel(DateTime m) => '${_monthNamesId[m.month - 1]} ${m.year}';
-
-  List<DateTime> get _next6Months {
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, 1);
-    return List.generate(6, (i) {
-      final d = DateTime(start.year, start.month + i, 1);
-      return d;
+  List<DateTime> get _next7Days {
+    final today = DateTime.now();
+    return List.generate(7, (i) {
+      final d = today.add(Duration(days: i));
+      return DateTime(d.year, d.month, d.day);
     });
   }
-
-  int get _daysInSelectedMonth {
-    final y = _selectedMonth.year;
-    final m = _selectedMonth.month;
-    // day 0 of next month = last day of current month
-    return DateTime(y, m + 1, 0).day;
-  }
-
-  List<int> get _daysList => List.generate(_daysInSelectedMonth, (i) => i + 1);
 
   List<String> get _timeSlots => const [
         '08:00',
@@ -220,135 +186,12 @@ class _BookingPageState extends State<BookingPage> {
     if (!mounted) return;
 
     if (res.isSuccess) {
-      final data = res.data;
-      final orderId = (data is Map && data['id'] != null)
-          ? int.tryParse(data['id'].toString()) ?? 0
-          : 0;
-
       await context.read<OrderProvider>().loadCustomerOrders();
-
-      if (!mounted) return;
-
-      // tanya user mau langsung bayar atau tidak
-      final payNow = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Pesanan dibuat'),
-          content: const Text('Lanjutkan pembayaran sekarang?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Nanti'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Bayar'),
-            ),
-          ],
-        ),
-      );
-
-      if (payNow == true && orderId != 0) {
-        await _startMidtransPaymentFlow(orderId);
-
-        // setelah open payment, kita arahkan tetap ke menu (user akan balik dari browser)
-        Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
-      } else {
-        Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
-      }
-    }
-  }
-
-  Future<void> _startMidtransPaymentFlow(int orderId) async {
-    // 1) create snap
-    final res = await _orderApi.createMidtransSnapPayment(orderId: orderId);
-
-    if (!mounted) return;
-
-    if (!res.isSuccess) {
+      // Popup/snackbar sukses dihapus sesuai request.
+      Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message)),
-      );
-      return;
-    }
-
-    final data = res.data;
-    final redirectUrl = (data is Map && data['redirect_url'] != null)
-        ? data['redirect_url'].toString()
-        : (data is Map &&
-                data['payment'] is Map &&
-                (data['payment']['redirect_url'] != null))
-            ? data['payment']['redirect_url'].toString()
-            : null;
-
-    if (redirectUrl == null || redirectUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('redirect_url tidak ditemukan dari server')),
-      );
-      return;
-    }
-
-    // 2) open browser
-    final uri = Uri.parse(redirectUrl);
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gagal membuka halaman pembayaran')),
-      );
-    }
-  }
-
-  // TAMBAHAN UNTUK CEK STATUS PEMBAYARAN SETELAH KEMBALI DARI MIDTRANS
-  Future<void> _checkPaymentStatus(int orderId) async {
-    try {
-      final list = await _orderApi.fetchPaymentsByOrder(orderId);
-      if (!mounted) return;
-
-      if (list.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Belum ada data pembayaran untuk order ini')),
-        );
-        return;
-      }
-
-      // ambil payment terbaru (id terbesar)
-      list.sort((a, b) => b.id.compareTo(a.id));
-      final latest = list.first;
-
-      final msg = 'Status pembayaran: ${latest.status.toUpperCase()}';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-
-      if (latest.status == 'paid') {
-        // refresh list order
-        await context.read<OrderProvider>().loadCustomerOrders();
-
-        if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Pembayaran Berhasil'),
-            content: const Text(
-                'Pembayaran kamu sudah diterima. Pesanan akan segera diproses mitra.'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamedAndRemoveUntil(
-                      context, '/menu', (_) => false);
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal cek status: $e')),
       );
     }
   }
@@ -386,7 +229,6 @@ class _BookingPageState extends State<BookingPage> {
             Text('Tipe: $vehicleTypeName'),
             Text('Harga: Rp $price'),
             const SizedBox(height: 16),
-
             ListTile(
               title: Text(_address.isEmpty ? 'Pilih alamat' : _address),
               subtitle: const Text('Gunakan map picker'),
@@ -394,68 +236,22 @@ class _BookingPageState extends State<BookingPage> {
               onTap: _pickAddress,
             ),
             const SizedBox(height: 10),
-
-            const Text('Jadwal', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Jadwal'),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              children: _next7Days.map((d) {
+                final selected = d == _selectedDate;
+                return ChoiceChip(
+                  label: Text('${d.day}/${d.month}'),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _selectedDate = d),
+                );
+              }).toList(),
+            ),
             const SizedBox(height: 10),
-
-            // Bulan
-            const Text('Bulan', style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 6),
             Wrap(
               spacing: 8,
-              runSpacing: 8,
-              children: _next6Months.map((m) {
-                final selected = (m.year == _selectedMonth.year &&
-                    m.month == _selectedMonth.month);
-                return ChoiceChip(
-                  label: Text(_monthLabel(m)),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedMonth = DateTime(m.year, m.month, 1);
-                      final maxDay = _daysInSelectedMonth;
-                      if (_selectedDay > maxDay) _selectedDay = maxDay;
-                      _selectedDate = DateTime(_selectedMonth.year,
-                          _selectedMonth.month, _selectedDay);
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Tanggal
-            const Text('Tanggal',
-                style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _daysList.map((day) {
-                final selected = day == _selectedDay;
-                return ChoiceChip(
-                  label: Text(day.toString()),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedDay = day;
-                      _selectedDate = DateTime(_selectedMonth.year,
-                          _selectedMonth.month, _selectedDay);
-                    });
-                  },
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Jam
-            const Text('Jam', style: TextStyle(fontWeight: FontWeight.w500)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
               children: _timeSlots.map((t) {
                 final selected = t == _selectedTime;
                 return ChoiceChip(
@@ -465,27 +261,26 @@ class _BookingPageState extends State<BookingPage> {
                 );
               }).toList(),
             ),
-
-            const SizedBox(height: 16),
             const SizedBox(height: 16),
             TextField(
                 controller: _plateController,
-                decoration: const InputDecoration(labelText: 'Nomor Plat')),
+                decoration: const InputDecoration(labelText: 'Plat Nomor')),
             TextField(
                 controller: _brandController,
-                decoration: const InputDecoration(labelText: 'Merk Mobil')),
+                decoration:
+                    const InputDecoration(labelText: 'Merk (opsional)')),
             TextField(
                 controller: _modelController,
-                decoration: const InputDecoration(labelText: 'Model Mobil')),
+                decoration:
+                    const InputDecoration(labelText: 'Model (opsional)')),
             TextField(
                 controller: _colorController,
-                decoration: const InputDecoration(
-                    labelText: 'Warna Mobil (Opsiional)')),
+                decoration:
+                    const InputDecoration(labelText: 'Warna (opsional)')),
             TextField(
                 controller: _notesController,
                 decoration:
-                    const InputDecoration(labelText: 'Catatan (Opsional)')),
-
+                    const InputDecoration(labelText: 'Catatan (opsional)')),
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,

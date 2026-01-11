@@ -9,6 +9,7 @@ class Order {
   final String date;
   final String time;
   final String status;
+  final String paymentStatus; // unpaid|paid|pending|failed|expired
   final String image;
   final String location;
   final String detailAddress;
@@ -29,6 +30,7 @@ class Order {
     required this.date,
     required this.time,
     required this.status,
+    this.paymentStatus = 'unpaid',
     required this.image,
     required this.location,
     required this.detailAddress,
@@ -51,6 +53,7 @@ class Order {
     String? date,
     String? time,
     String? status,
+    String? paymentStatus,
     String? image,
     String? location,
     String? detailAddress,
@@ -71,6 +74,7 @@ class Order {
       date: date ?? this.date,
       time: time ?? this.time,
       status: status ?? this.status,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
       image: image ?? this.image,
       location: location ?? this.location,
       detailAddress: detailAddress ?? this.detailAddress,

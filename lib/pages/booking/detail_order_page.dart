@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../payment/payment_page.dart';
 import '../../providers/order_provider.dart';
 import '../../models/order_model.dart';
 
@@ -67,7 +66,6 @@ class DetailOrderPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Container(
@@ -84,7 +82,6 @@ class DetailOrderPage extends StatelessWidget {
               )
             ],
           ),
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -93,31 +90,21 @@ class DetailOrderPage extends StatelessWidget {
               _infoRow("Booking ID", bookingId),
               _infoRow("Tanggal", date),
               _infoRow("Jam", time),
-
               const SizedBox(height: 12),
               const Divider(),
-
               _infoRow("Jenis Mobil", carType),
               _infoRow("Plat Nomor", plateNumber),
-
               const SizedBox(height: 12),
               const Divider(),
-
               _addressCard(address, detailAddress),
-
               const Divider(),
-
               _infoRow("Harga Mobil", "Rp $price"),
               _infoRow("Harga Layanan", "Rp $servicePrice"),
               _infoRow("Pajak", "Rp $tax"),
               _infoRow("Diskon", "$discount%"),
-
               const Divider(),
-
               _infoRow("Total", "Rp $total", bold: true, big: true),
-
               const SizedBox(height: 20),
-
               Row(
                 children: [
                   if (showDelete)
@@ -141,9 +128,7 @@ class DetailOrderPage extends StatelessWidget {
                         ),
                       ),
                     ),
-
                   if (showDelete) const SizedBox(width: 10),
-
                   Expanded(
                     child: SizedBox(
                       height: 45,
@@ -177,36 +162,30 @@ class DetailOrderPage extends StatelessWidget {
                               total: total,
                             );
 
-
                             orderProvider.addOrder(newOrder);
 
-                            // ================================
-                            // ✅ LANJUT KE PAYMENT (TETAP)
-                            // ================================
-
-                            final bookingData = {
-                              "username": username,
-                              "phoneNumber": phoneNumber,
-                              "bookingId": bookingId,
-                              "date": date,
-                              "time": time,
-                              "carType": carType,
-                              "price": price,
-                              "servicePrice": servicePrice,
-                              "tax": tax,
-                              "discount": discount,
-                              "address": address,
-                              "detailAddress": detailAddress,
-                              "plateNumber": plateNumber,
-                              "total": total,
-                            };
-
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PaymentPage(
-                                  bookingData: bookingData,
+                            // =====================================================
+                            // ✅ FLOW BARU: pembayaran hanya bisa setelah mitra ACCEPT
+                            // =====================================================
+                            // Jadi setelah membuat pesanan, customer hanya menunggu.
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => AlertDialog(
+                                title: const Text('Pesanan dibuat'),
+                                content: const Text(
+                                  'Silahkan tunggu pesanan anda diterima oleh mitra!',
                                 ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context); // close dialog
+                                      Navigator.pop(
+                                          context); // back from detail page
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
                               ),
                             );
                           }

@@ -121,7 +121,8 @@ class OrderProvider extends ChangeNotifier {
     required int orderId,
     required String status,
   }) async {
-    final res = await _orderApi.partnerUpdateStatus(orderId: orderId, status: status);
+    final res =
+        await _orderApi.partnerUpdateStatus(orderId: orderId, status: status);
     return res;
   }
 
@@ -129,7 +130,8 @@ class OrderProvider extends ChangeNotifier {
   // ✅ Mapper: API -> UI Order
   // ============================================================
   Order _mapApiOrderToUiForCustomer(Map<String, dynamic> o) {
-    final partner = (o['partner'] is Map) ? Map<String, dynamic>.from(o['partner']) : null;
+    final partner =
+        (o['partner'] is Map) ? Map<String, dynamic>.from(o['partner']) : null;
     final title = partner?['business_name']?.toString() ?? 'Mitra';
 
     final date = (o['scheduled_date'] ?? '').toString().isNotEmpty
@@ -157,18 +159,22 @@ class OrderProvider extends ChangeNotifier {
       phoneNumber: '',
       bookingId: (o['id'] ?? '').toString(),
       carType: (o['vehicle_model'] ?? '').toString().isNotEmpty
-          ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'.trim()
+          ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'
+              .trim()
           : 'Vehicle',
       price: 0,
       servicePrice: totalAmount,
       tax: 0,
       discount: 0,
+      paymentStatus: (o['payment_status'] ?? 'unpaid').toString(),
       total: totalAmount,
     );
   }
 
   Order _mapApiOrderToUiForPartner(Map<String, dynamic> o) {
-    final customer = (o['customer'] is Map) ? Map<String, dynamic>.from(o['customer']) : null;
+    final customer = (o['customer'] is Map)
+        ? Map<String, dynamic>.from(o['customer'])
+        : null;
     final title = customer?['name']?.toString() ?? 'Customer';
 
     final date = (o['scheduled_date'] ?? '').toString().isNotEmpty
@@ -196,12 +202,14 @@ class OrderProvider extends ChangeNotifier {
       phoneNumber: '',
       bookingId: (o['id'] ?? '').toString(),
       carType: (o['vehicle_model'] ?? '').toString().isNotEmpty
-          ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'.trim()
+          ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'
+              .trim()
           : 'Vehicle',
       price: 0,
       servicePrice: totalAmount,
       tax: 0,
       discount: 0,
+      paymentStatus: (o['payment_status'] ?? 'unpaid').toString(),
       total: totalAmount,
     );
   }

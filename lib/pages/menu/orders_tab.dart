@@ -5,11 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../models/review_model.dart';
-import '../../features/payment/models/payment_model.dart';
 
-import '../../features/order/data/order_api.dart';
+import '../../core/network/dio_client.dart';
 
-import '../booking/detail_service_page.dart';
 import '../booking/detail_order_page.dart';
 import '../review/review_popup.dart';
 
@@ -23,79 +21,100 @@ class OrdersTab extends StatefulWidget {
 class _OrdersTabState extends State<OrdersTab> {
   bool _popupShown = false;
 
-  final OrderApi _orderApi = OrderApi();
-
-  /// Cache Future agar tidak spam request ketika list rebuild.
-  final Map<int, Future<PaymentModel?>> _latestPaymentFutures = {};
-
   // ✅ FLAG LOKAL: MENANDAI ORDER YANG SUDAH DIREVIEW
   final Set<String> _reviewedOrderIds = {};
 
-  int? _toIntOrderId(String raw) {
-    final v = int.tryParse(raw);
-    if (v == null || v <= 0) return null;
-    return v;
+  // ===================== PAYMENT (MIDTRANS SNAP) =====================
+  Future<void> _startPayment(BuildContext context, dynamic order) async {
+    // order: Order model dari provider
+    if ((order.status ?? '').toString() != 'accepted') {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Belum bisa bayar'),
+          content:
+              const Text('Silahkan tunggu pesanan anda diterima oleh mitra!'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final int? orderId = int.tryParse((order.bookingId ?? '').toString());
+    if (orderId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Order ID tidak valid')),
+      );
+      return;
+    }
+
+    try {
+      final dio = DioClient().dio;
+      final res = await dio.post(
+        '/orders/$orderId/payments',
+        data: const {'payment_method': 'midtrans_snap'},
+      );
+
+      final body = res.data;
+      final data = (body is Map) ? body['data'] : null;
+      final redirectUrl =
+          (data is Map) ? data['redirect_url']?.toString() : null;
+
+      if (redirectUrl == null || redirectUrl.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('redirect_url tidak ditemukan')),
+        );
+        return;
+      }
+
+      final ok = await launchUrl(
+        Uri.parse(redirectUrl),
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal membuka halaman pembayaran')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Silahkan selesaikan pembayaran di Midtrans')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuat pembayaran: $e')),
+      );
+    }
   }
 
-  Future<PaymentModel?> _getLatestPayment(int orderId) {
-    return _latestPaymentFutures.putIfAbsent(orderId, () async {
-      final list = await _orderApi.fetchPaymentsByOrder(orderId);
-      if (list.isEmpty) return null;
-      list.sort((a, b) => b.id.compareTo(a.id));
-      return list.first;
-    });
-  }
+  Widget _paymentBadge(String status) {
+    final s = status.toLowerCase();
+    final isPaid = s == 'paid' || s == 'settlement';
+    final color = isPaid ? Colors.green : Colors.orange;
+    final label = isPaid ? 'Sudah Bayar' : 'Belum Bayar';
 
-  Future<void> _payNow(BuildContext context, int orderId) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Lanjut bayar?'),
-        content:
-            const Text('Pembayaran akan dibuka melalui Midtrans (Sandbox).'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Batal')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Bayar')),
-        ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
       ),
     );
-
-    if (ok != true) return;
-
-    final res = await _orderApi.createMidtransSnapPayment(orderId: orderId);
-    if (!mounted) return;
-
-    if (res.status != 'success') {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(res.message)));
-      return;
-    }
-
-    final data = res.data;
-    final redirectUrl = (data is Map && data['redirect_url'] != null)
-        ? data['redirect_url'].toString()
-        : (data is Map &&
-                data['payment'] is Map &&
-                (data['payment']['redirect_url'] != null))
-            ? data['payment']['redirect_url'].toString()
-            : null;
-
-    if (redirectUrl == null || redirectUrl.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('redirect_url tidak ditemukan')));
-      return;
-    }
-
-    await launchUrl(Uri.parse(redirectUrl),
-        mode: LaunchMode.externalApplication);
-
-    // refresh future supaya pas balik ke app bisa fetch ulang status (optional)
-    _latestPaymentFutures.remove(orderId);
-    setState(() {});
   }
 
   @override
@@ -110,39 +129,10 @@ class _OrdersTabState extends State<OrdersTab> {
 
   @override
   Widget build(BuildContext context) {
-    final orderProv = Provider.of<OrderProvider>(context);
-    final orders = orderProv.orders;
+    final orders = context.watch<OrderProvider>().orders;
 
-    if (orderProv.isLoading && orders.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (orderProv.errorMessage != null && orders.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                orderProv.errorMessage!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () =>
-                    context.read<OrderProvider>().loadCustomerOrders(),
-                child: const Text('Coba lagi'),
-              )
-            ],
-          ),
-        ),
-      );
-    }
-
-    // ✅ CEK OTOMATIS: ADA PESANAN SELESAI & BELUM DIREVIEW → MUNCULKAN POPUP
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // ✅ POPUP REVIEW ketika ada order selesai dan belum direview
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (_popupShown) return;
 
       try {
@@ -152,19 +142,22 @@ class _OrdersTabState extends State<OrdersTab> {
               !_reviewedOrderIds.contains(o.bookingId),
         );
 
+        // ✅ TUNGGU UI SELESAI
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        if (!mounted) return;
         _popupShown = true;
 
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => ReviewPopup(
-            mitraName: selesaiOrder.title,
-          ),
+          builder: (_) => ReviewPopup(mitraName: selesaiOrder.title),
         ).then((result) {
           if (result != null) {
             final int rating = result["rating"];
             final String review = result["review"];
 
+            // ✅ SIMPAN KE REVIEW PROVIDER (NYAMBUNG KE MITRA)
             context.read<ReviewProvider>().addReview(
                   ReviewModel(
                     orderId: selesaiOrder.bookingId,
@@ -183,7 +176,7 @@ class _OrdersTabState extends State<OrdersTab> {
             _popupShown = false;
           }
         });
-      } catch (e) {
+      } catch (_) {
         _popupShown = false;
       }
     });
@@ -192,66 +185,49 @@ class _OrdersTabState extends State<OrdersTab> {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset("assets/images/empty_box.png", height: 160),
-            const SizedBox(height: 20),
-            const Text(
-              "Belum ada pesanan",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Pesanan kamu akan muncul di sini setelah pembayaran berhasil.",
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black45),
-            ),
+          children: const [
+            Icon(Icons.assignment_turned_in, size: 60, color: Colors.grey),
+            SizedBox(height: 10),
+            Text("Belum ada pesanan", style: TextStyle(color: Colors.grey)),
           ],
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () => context.read<OrderProvider>().loadCustomerOrders(),
+    return Padding(
+      padding: const EdgeInsets.all(12),
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
         itemCount: orders.length,
         itemBuilder: (context, index) {
           final order = orders[index];
 
-          // ✅ STATUS BADGE COLOR
           Color statusColor;
           String statusText;
 
           switch (order.status) {
             case "pending":
               statusColor = Colors.grey;
-              statusText = "Menunggu Konfirmasi";
+              statusText = "Menunggu";
               break;
             case "accepted":
-              statusColor = Colors.blue;
+              statusColor = Colors.blueAccent;
               statusText = "Diterima";
+              break;
+            case "rejected":
+              statusColor = Colors.redAccent;
+              statusText = "Ditolak";
               break;
             case "on_the_way":
               statusColor = Colors.orange;
               statusText = "Menuju Lokasi";
               break;
             case "in_progress":
-              statusColor = Colors.orange;
+              statusColor = Colors.purple;
               statusText = "Dalam Pengerjaan";
               break;
             case "completed":
               statusColor = Colors.green;
-              statusText = _reviewedOrderIds.contains(order.bookingId)
-                  ? "Selesai • Sudah Diulas"
-                  : "Selesai";
-              break;
-            case "rejected":
-              statusColor = Colors.red;
-              statusText = "Ditolak";
+              statusText = "Selesai";
               break;
             case "cancelled":
               statusColor = Colors.redAccent;
@@ -261,10 +237,6 @@ class _OrdersTabState extends State<OrdersTab> {
               statusColor = Colors.grey;
               statusText = order.status;
           }
-
-          final int? orderIdInt = _toIntOrderId(order.bookingId);
-          final Future<PaymentModel?>? payFuture =
-              (orderIdInt != null) ? _getLatestPayment(orderIdInt) : null;
 
           return GestureDetector(
             onTap: () {
@@ -292,132 +264,52 @@ class _OrdersTabState extends State<OrdersTab> {
                 ),
               );
             },
-            child: FutureBuilder<PaymentModel?>(
-              future: payFuture,
-              builder: (context, snap) {
-                final latestPay = snap.data;
-
-                Color payColor = Colors.grey;
-                String payText = 'Belum bayar';
-                if (latestPay != null) {
-                  switch (latestPay.status) {
-                    case 'paid':
-                      payColor = Colors.green;
-                      payText = 'Paid';
-                      break;
-                    case 'pending':
-                      payColor = Colors.orange;
-                      payText = 'Pending';
-                      break;
-                    case 'failed':
-                      payColor = Colors.red;
-                      payText = 'Failed';
-                      break;
-                    case 'expired':
-                      payColor = Colors.redAccent;
-                      payText = 'Expired';
-                      break;
-                    default:
-                      payText = latestPay.status;
-                  }
-                }
-
-                final bool canPay = (orderIdInt != null) &&
-                    (latestPay == null || latestPay.status != 'paid');
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12.withOpacity(0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF3FF),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 55,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.local_car_wash, color: Colors.blue),
                   ),
-                  child: Row(
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(order.date,
+                            style: const TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 4),
+                        Text(
+                          order.location,
+                          style: const TextStyle(color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(
-                          order.image,
-                          width: 60,
-                          height: 60,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              order.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(order.date,
-                                style: const TextStyle(color: Colors.grey)),
-                            const SizedBox(height: 4),
-                            Text(
-                              order.location,
-                              style: const TextStyle(color: Colors.black54),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 3, horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: payColor.withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(
-                                        color: payColor.withOpacity(0.35)),
-                                  ),
-                                  child: Text(
-                                    'Payment: $payText',
-                                    style: TextStyle(
-                                      color: payColor,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (canPay)
-                                  SizedBox(
-                                    height: 28,
-                                    child: OutlinedButton(
-                                      onPressed: () =>
-                                          _payNow(context, orderIdInt!),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                        ),
-                                      ),
-                                      child: const Text('Bayar',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             vertical: 4, horizontal: 10),
@@ -433,11 +325,34 @@ class _OrdersTabState extends State<OrdersTab> {
                             fontSize: 12,
                           ),
                         ),
-                      )
+                      ),
+                      const SizedBox(height: 8),
+                      _paymentBadge(order.paymentStatus ?? 'unpaid'),
+                      const SizedBox(height: 10),
+                      if (order.status == 'accepted' &&
+                          ((order.paymentStatus ?? 'unpaid') != 'paid'))
+                        SizedBox(
+                          height: 34,
+                          child: ElevatedButton(
+                            onPressed: () => _startPayment(context, order),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 14),
+                            ),
+                            child: const Text(
+                              'Bayar',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                );
-              },
+                ],
+              ),
             ),
           );
         },
