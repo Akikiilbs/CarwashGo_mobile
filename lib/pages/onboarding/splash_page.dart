@@ -97,7 +97,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
             FadeTransition(
               opacity: _textOpacity,
               child: const Text(
-                "Solusi Cuci Mobil Praktis dan Cepat tanpa harus datang ke tempat",
+                "Solusi Cuci Mobil Praktis dan Cepat",
                 style: TextStyle(
                   fontSize: 15,
                   color: Colors.white70,

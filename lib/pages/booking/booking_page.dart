@@ -5,6 +5,8 @@ import '../../features/order/data/order_api.dart';
 import '../../features/order/models/simple_api_response.dart';
 import '../../providers/order_provider.dart';
 import '../map/map_picker_page.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../features/payment/models/payment_model.dart';
 
 class BookingPage extends StatefulWidget {
   /// serviceItem dari marketplace: {
@@ -60,9 +62,19 @@ class _BookingPageState extends State<BookingPage> {
     super.dispose();
   }
 
-    static const List<String> _monthNamesId = [
-    'Januari','Februari','Maret','April','Mei','Juni',
-    'Juli','Agustus','September','Oktober','November','Desember',
+  static const List<String> _monthNamesId = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
   ];
 
   String _monthLabel(DateTime m) => '${_monthNamesId[m.month - 1]} ${m.year}';
@@ -86,7 +98,16 @@ class _BookingPageState extends State<BookingPage> {
   List<int> get _daysList => List.generate(_daysInSelectedMonth, (i) => i + 1);
 
   List<String> get _timeSlots => const [
-        '08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00',
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+        '17:00',
       ];
 
   String _two(int v) => v < 10 ? '0$v' : '$v';
@@ -109,8 +130,12 @@ class _BookingPageState extends State<BookingPage> {
 
     setState(() {
       _address = (result['address'] ?? '').toString();
-      _lat = result['latitude'] is num ? (result['latitude'] as num).toDouble() : null;
-      _lng = result['longitude'] is num ? (result['longitude'] as num).toDouble() : null;
+      _lat = result['latitude'] is num
+          ? (result['latitude'] as num).toDouble()
+          : null;
+      _lng = result['longitude'] is num
+          ? (result['longitude'] as num).toDouble()
+          : null;
     });
   }
 
@@ -118,7 +143,8 @@ class _BookingPageState extends State<BookingPage> {
     final item = widget.serviceItem;
     if (item == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Silakan pilih layanan dari Home terlebih dahulu.')),
+        const SnackBar(
+            content: Text('Silakan pilih layanan dari Home terlebih dahulu.')),
       );
       return;
     }
@@ -130,18 +156,26 @@ class _BookingPageState extends State<BookingPage> {
       return;
     }
 
-    final partner = item['partner'] is Map ? Map<String, dynamic>.from(item['partner']) : null;
-    final vehicleType = item['vehicle_type'] is Map ? Map<String, dynamic>.from(item['vehicle_type']) : null;
+    final partner = item['partner'] is Map
+        ? Map<String, dynamic>.from(item['partner'])
+        : null;
+    final vehicleType = item['vehicle_type'] is Map
+        ? Map<String, dynamic>.from(item['vehicle_type'])
+        : null;
 
     final partnerId = int.tryParse(partner?['id']?.toString() ?? '') ?? 0;
-    final vehicleTypeId = int.tryParse(vehicleType?['id']?.toString() ?? '') ?? 0;
+    final vehicleTypeId =
+        int.tryParse(vehicleType?['id']?.toString() ?? '') ?? 0;
 
-    final partnerServiceId =
-        int.tryParse((item['partner_service_id'] ?? item['id'])?.toString() ?? '') ?? 0;
+    final partnerServiceId = int.tryParse(
+            (item['partner_service_id'] ?? item['id'])?.toString() ?? '') ??
+        0;
 
     if (partnerId == 0 || vehicleTypeId == 0 || partnerServiceId == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data layanan tidak lengkap (partner/service/vehicle).')),
+        const SnackBar(
+            content:
+                Text('Data layanan tidak lengkap (partner/service/vehicle).')),
       );
       return;
     }
@@ -153,16 +187,26 @@ class _BookingPageState extends State<BookingPage> {
       res = await _orderApi.createOrderV2(
         partnerId: partnerId,
         vehicleTypeId: vehicleTypeId,
-        vehicleBrand: _brandController.text.trim().isEmpty ? null : _brandController.text.trim(),
-        vehicleModel: _modelController.text.trim().isEmpty ? null : _modelController.text.trim(),
-        vehicleColor: _colorController.text.trim().isEmpty ? null : _colorController.text.trim(),
-        plateNumber: _plateController.text.trim().isEmpty ? null : _plateController.text.trim(),
+        vehicleBrand: _brandController.text.trim().isEmpty
+            ? null
+            : _brandController.text.trim(),
+        vehicleModel: _modelController.text.trim().isEmpty
+            ? null
+            : _modelController.text.trim(),
+        vehicleColor: _colorController.text.trim().isEmpty
+            ? null
+            : _colorController.text.trim(),
+        plateNumber: _plateController.text.trim().isEmpty
+            ? null
+            : _plateController.text.trim(),
         address: _address.trim(),
         latitude: _lat,
         longitude: _lng,
         scheduledDate: _fmtYmd(_selectedDate),
         scheduledTime: _selectedTime,
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
         discount: 0,
         paymentMethod: null,
         items: [
@@ -176,16 +220,135 @@ class _BookingPageState extends State<BookingPage> {
     if (!mounted) return;
 
     if (res.isSuccess) {
+      final data = res.data;
+      final orderId = (data is Map && data['id'] != null)
+          ? int.tryParse(data['id'].toString()) ?? 0
+          : 0;
+
       await context.read<OrderProvider>().loadCustomerOrders();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pesanan berhasil dibuat')),
+      if (!mounted) return;
+
+      // tanya user mau langsung bayar atau tidak
+      final payNow = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Pesanan dibuat'),
+          content: const Text('Lanjutkan pembayaran sekarang?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Nanti'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Bayar'),
+            ),
+          ],
+        ),
       );
 
-      Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
-    } else {
+      if (payNow == true && orderId != 0) {
+        await _startMidtransPaymentFlow(orderId);
+
+        // setelah open payment, kita arahkan tetap ke menu (user akan balik dari browser)
+        Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
+      } else {
+        Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
+      }
+    }
+  }
+
+  Future<void> _startMidtransPaymentFlow(int orderId) async {
+    // 1) create snap
+    final res = await _orderApi.createMidtransSnapPayment(orderId: orderId);
+
+    if (!mounted) return;
+
+    if (!res.isSuccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(res.message)),
+      );
+      return;
+    }
+
+    final data = res.data;
+    final redirectUrl = (data is Map && data['redirect_url'] != null)
+        ? data['redirect_url'].toString()
+        : (data is Map &&
+                data['payment'] is Map &&
+                (data['payment']['redirect_url'] != null))
+            ? data['payment']['redirect_url'].toString()
+            : null;
+
+    if (redirectUrl == null || redirectUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('redirect_url tidak ditemukan dari server')),
+      );
+      return;
+    }
+
+    // 2) open browser
+    final uri = Uri.parse(redirectUrl);
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+    if (!ok && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membuka halaman pembayaran')),
+      );
+    }
+  }
+
+  // TAMBAHAN UNTUK CEK STATUS PEMBAYARAN SETELAH KEMBALI DARI MIDTRANS
+  Future<void> _checkPaymentStatus(int orderId) async {
+    try {
+      final list = await _orderApi.fetchPaymentsByOrder(orderId);
+      if (!mounted) return;
+
+      if (list.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Belum ada data pembayaran untuk order ini')),
+        );
+        return;
+      }
+
+      // ambil payment terbaru (id terbesar)
+      list.sort((a, b) => b.id.compareTo(a.id));
+      final latest = list.first;
+
+      final msg = 'Status pembayaran: ${latest.status.toUpperCase()}';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+
+      if (latest.status == 'paid') {
+        // refresh list order
+        await context.read<OrderProvider>().loadCustomerOrders();
+
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Pembayaran Berhasil'),
+            content: const Text(
+                'Pembayaran kamu sudah diterima. Pesanan akan segera diproses mitra.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, '/menu', (_) => false);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal cek status: $e')),
       );
     }
   }
@@ -194,10 +357,15 @@ class _BookingPageState extends State<BookingPage> {
   Widget build(BuildContext context) {
     final item = widget.serviceItem;
 
-    final partner = item?['partner'] is Map ? Map<String, dynamic>.from(item?['partner']) : null;
-    final service = item?['service'] is Map ? Map<String, dynamic>.from(item?['service']) : null;
-    final vehicleType =
-        item?['vehicle_type'] is Map ? Map<String, dynamic>.from(item?['vehicle_type']) : null;
+    final partner = item?['partner'] is Map
+        ? Map<String, dynamic>.from(item?['partner'])
+        : null;
+    final service = item?['service'] is Map
+        ? Map<String, dynamic>.from(item?['service'])
+        : null;
+    final vehicleType = item?['vehicle_type'] is Map
+        ? Map<String, dynamic>.from(item?['vehicle_type'])
+        : null;
 
     final partnerName = partner?['business_name']?.toString() ?? '-';
     final serviceName = service?['name']?.toString() ?? '-';
@@ -211,7 +379,9 @@ class _BookingPageState extends State<BookingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(serviceName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(serviceName,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text('Mitra: $partnerName'),
             Text('Tipe: $vehicleTypeName'),
             Text('Harga: Rp $price'),
@@ -225,7 +395,7 @@ class _BookingPageState extends State<BookingPage> {
             ),
             const SizedBox(height: 10),
 
-                        const Text('Jadwal', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Jadwal', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 10),
 
             // Bulan
@@ -235,7 +405,8 @@ class _BookingPageState extends State<BookingPage> {
               spacing: 8,
               runSpacing: 8,
               children: _next6Months.map((m) {
-                final selected = (m.year == _selectedMonth.year && m.month == _selectedMonth.month);
+                final selected = (m.year == _selectedMonth.year &&
+                    m.month == _selectedMonth.month);
                 return ChoiceChip(
                   label: Text(_monthLabel(m)),
                   selected: selected,
@@ -244,7 +415,8 @@ class _BookingPageState extends State<BookingPage> {
                       _selectedMonth = DateTime(m.year, m.month, 1);
                       final maxDay = _daysInSelectedMonth;
                       if (_selectedDay > maxDay) _selectedDay = maxDay;
-                      _selectedDate = DateTime(_selectedMonth.year, _selectedMonth.month, _selectedDay);
+                      _selectedDate = DateTime(_selectedMonth.year,
+                          _selectedMonth.month, _selectedDay);
                     });
                   },
                 );
@@ -254,7 +426,8 @@ class _BookingPageState extends State<BookingPage> {
             const SizedBox(height: 12),
 
             // Tanggal
-            const Text('Tanggal', style: TextStyle(fontWeight: FontWeight.w500)),
+            const Text('Tanggal',
+                style: TextStyle(fontWeight: FontWeight.w500)),
             const SizedBox(height: 6),
             Wrap(
               spacing: 8,
@@ -267,7 +440,8 @@ class _BookingPageState extends State<BookingPage> {
                   onSelected: (_) {
                     setState(() {
                       _selectedDay = day;
-                      _selectedDate = DateTime(_selectedMonth.year, _selectedMonth.month, _selectedDay);
+                      _selectedDate = DateTime(_selectedMonth.year,
+                          _selectedMonth.month, _selectedDay);
                     });
                   },
                 );
@@ -293,12 +467,24 @@ class _BookingPageState extends State<BookingPage> {
             ),
 
             const SizedBox(height: 16),
-const SizedBox(height: 16),
-            TextField(controller: _plateController, decoration: const InputDecoration(labelText: 'Nomor Plat')),
-            TextField(controller: _brandController, decoration: const InputDecoration(labelText: 'Merk Mobil')),
-            TextField(controller: _modelController, decoration: const InputDecoration(labelText: 'Model Mobil')),
-            TextField(controller: _colorController, decoration: const InputDecoration(labelText: 'Warna Mobil (Opsiional)')),
-            TextField(controller: _notesController, decoration: const InputDecoration(labelText: 'Catatan (Opsional)')),
+            const SizedBox(height: 16),
+            TextField(
+                controller: _plateController,
+                decoration: const InputDecoration(labelText: 'Nomor Plat')),
+            TextField(
+                controller: _brandController,
+                decoration: const InputDecoration(labelText: 'Merk Mobil')),
+            TextField(
+                controller: _modelController,
+                decoration: const InputDecoration(labelText: 'Model Mobil')),
+            TextField(
+                controller: _colorController,
+                decoration: const InputDecoration(
+                    labelText: 'Warna Mobil (Opsiional)')),
+            TextField(
+                controller: _notesController,
+                decoration:
+                    const InputDecoration(labelText: 'Catatan (Opsional)')),
 
             const SizedBox(height: 18),
             SizedBox(
@@ -307,7 +493,10 @@ const SizedBox(height: 16),
               child: ElevatedButton(
                 onPressed: _loading ? null : _submitOrder,
                 child: _loading
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Text('Buat Pesanan'),
               ),
             ),

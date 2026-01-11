@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../core/network/dio_client.dart';
 import '../models/simple_api_response.dart';
+import '../../payment/models/payment_model.dart';
 
 class OrderApi {
   final Dio _dio = DioClient().dio;
@@ -70,16 +71,19 @@ class OrderApi {
       if (e.response != null && e.response?.data is Map<String, dynamic>) {
         return SimpleApiResponse.fromJson(e.response!.data);
       }
-      return SimpleApiResponse(status: 'error', message: 'Terjadi kesalahan jaringan');
+      return SimpleApiResponse(
+          status: 'error', message: 'Terjadi kesalahan jaringan');
     } catch (_) {
-      return SimpleApiResponse(status: 'error', message: 'Terjadi kesalahan tak terduga');
+      return SimpleApiResponse(
+          status: 'error', message: 'Terjadi kesalahan tak terduga');
     }
   }
 
   // =========================================================
   // ✅ LIST ORDER (CUSTOMER) — GET /orders/customer
   // =========================================================
-  Future<List<Map<String, dynamic>>> fetchCustomerOrders({String? status}) async {
+  Future<List<Map<String, dynamic>>> fetchCustomerOrders(
+      {String? status}) async {
     final res = await _dio.get(
       '/orders/customer',
       queryParameters: {
@@ -88,14 +92,16 @@ class OrderApi {
     );
 
     final body = res.data;
-    final data = (body is Map && body['data'] is List) ? body['data'] as List : const [];
+    final data =
+        (body is Map && body['data'] is List) ? body['data'] as List : const [];
     return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
   // =========================================================
   // ✅ LIST ORDER (PARTNER) — GET /orders/partner
   // =========================================================
-  Future<List<Map<String, dynamic>>> fetchPartnerOrders({String? status}) async {
+  Future<List<Map<String, dynamic>>> fetchPartnerOrders(
+      {String? status}) async {
     final res = await _dio.get(
       '/orders/partner',
       queryParameters: {
@@ -104,7 +110,8 @@ class OrderApi {
     );
 
     final body = res.data;
-    final data = (body is Map && body['data'] is List) ? body['data'] as List : const [];
+    final data =
+        (body is Map && body['data'] is List) ? body['data'] as List : const [];
     return data.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
 
@@ -119,7 +126,8 @@ class OrderApi {
       if (e.response != null && e.response?.data is Map<String, dynamic>) {
         return SimpleApiResponse.fromJson(e.response!.data);
       }
-      return SimpleApiResponse(status: 'error', message: 'Gagal menerima order');
+      return SimpleApiResponse(
+          status: 'error', message: 'Gagal menerima order');
     }
   }
 
@@ -151,5 +159,62 @@ class OrderApi {
       }
       return SimpleApiResponse(status: 'error', message: 'Gagal update status');
     }
+  }
+
+  // =========================================================
+  // ✅ PAYMENT (MIDTRANS SNAP)
+  // POST /orders/{id}/payments
+  // =========================================================
+  Future<SimpleApiResponse> createMidtransSnapPayment({
+    required int orderId,
+  }) async {
+    try {
+      final res = await _dio.post(
+        '/orders/$orderId/payments',
+        data: {'payment_method': 'midtrans_snap'},
+      );
+      return SimpleApiResponse.fromJson(res.data);
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data is Map<String, dynamic>) {
+        return SimpleApiResponse.fromJson(e.response!.data);
+      }
+      return SimpleApiResponse(
+          status: 'error', message: 'Gagal membuat pembayaran');
+    } catch (_) {
+      return SimpleApiResponse(
+          status: 'error', message: 'Terjadi kesalahan tak terduga');
+    }
+  }
+
+  // =========================================================
+  // ✅ PAYMENT LIST BY ORDER
+  // GET /orders/{id}/payments
+  // =========================================================
+  Future<List<PaymentModel>> fetchPaymentsByOrder(int orderId) async {
+    final res = await _dio.get('/orders/$orderId/payments');
+    final body = res.data;
+
+    final data =
+        (body is Map && body['data'] is List) ? body['data'] as List : const [];
+    return data
+        .map((e) => PaymentModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+  }
+
+  // =========================================================
+  // ✅ PAYMENT DETAIL
+  // GET /payments/{paymentId}
+  // =========================================================
+  Future<PaymentModel?> fetchPaymentDetail(int paymentId) async {
+    final res = await _dio.get('/payments/$paymentId');
+    final body = res.data;
+
+    // umumnya: {status,message,data:{...payment...}}
+    final data = (body is Map && body['data'] is Map)
+        ? Map<String, dynamic>.from(body['data'])
+        : null;
+    if (data == null) return null;
+
+    return PaymentModel.fromJson(data);
   }
 }

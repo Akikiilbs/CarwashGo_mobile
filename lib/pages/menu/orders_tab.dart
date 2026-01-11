@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/order_provider.dart';
 import '../../providers/review_provider.dart';
 import '../../models/review_model.dart';
+import '../../features/payment/models/payment_model.dart';
 
+import '../../features/order/data/order_api.dart';
+
+import '../booking/detail_service_page.dart';
 import '../booking/detail_order_page.dart';
 import '../review/review_popup.dart';
 
@@ -18,8 +23,80 @@ class OrdersTab extends StatefulWidget {
 class _OrdersTabState extends State<OrdersTab> {
   bool _popupShown = false;
 
+  final OrderApi _orderApi = OrderApi();
+
+  /// Cache Future agar tidak spam request ketika list rebuild.
+  final Map<int, Future<PaymentModel?>> _latestPaymentFutures = {};
+
   // ✅ FLAG LOKAL: MENANDAI ORDER YANG SUDAH DIREVIEW
   final Set<String> _reviewedOrderIds = {};
+
+  int? _toIntOrderId(String raw) {
+    final v = int.tryParse(raw);
+    if (v == null || v <= 0) return null;
+    return v;
+  }
+
+  Future<PaymentModel?> _getLatestPayment(int orderId) {
+    return _latestPaymentFutures.putIfAbsent(orderId, () async {
+      final list = await _orderApi.fetchPaymentsByOrder(orderId);
+      if (list.isEmpty) return null;
+      list.sort((a, b) => b.id.compareTo(a.id));
+      return list.first;
+    });
+  }
+
+  Future<void> _payNow(BuildContext context, int orderId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Lanjut bayar?'),
+        content:
+            const Text('Pembayaran akan dibuka melalui Midtrans (Sandbox).'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Bayar')),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    final res = await _orderApi.createMidtransSnapPayment(orderId: orderId);
+    if (!mounted) return;
+
+    if (res.status != 'success') {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(res.message)));
+      return;
+    }
+
+    final data = res.data;
+    final redirectUrl = (data is Map && data['redirect_url'] != null)
+        ? data['redirect_url'].toString()
+        : (data is Map &&
+                data['payment'] is Map &&
+                (data['payment']['redirect_url'] != null))
+            ? data['payment']['redirect_url'].toString()
+            : null;
+
+    if (redirectUrl == null || redirectUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('redirect_url tidak ditemukan')));
+      return;
+    }
+
+    await launchUrl(Uri.parse(redirectUrl),
+        mode: LaunchMode.externalApplication);
+
+    // refresh future supaya pas balik ke app bisa fetch ulang status (optional)
+    _latestPaymentFutures.remove(orderId);
+    setState(() {});
+  }
 
   @override
   void initState() {
@@ -88,7 +165,6 @@ class _OrdersTabState extends State<OrdersTab> {
             final int rating = result["rating"];
             final String review = result["review"];
 
-            // ✅ SIMPAN KE REVIEW PROVIDER (NYAMBUNG KE MITRA)
             context.read<ReviewProvider>().addReview(
                   ReviewModel(
                     orderId: selesaiOrder.bookingId,
@@ -99,17 +175,15 @@ class _OrdersTabState extends State<OrdersTab> {
                   ),
                 );
 
-            // ✅ SET FLAG: ORDER SUDAH DIREVIEW
             setState(() {
               _reviewedOrderIds.add(selesaiOrder.bookingId);
-              _popupShown = false; // reset untuk order berikutnya
+              _popupShown = false;
             });
           } else {
             _popupShown = false;
           }
         });
       } catch (e) {
-        // Tidak ada order selesai yang belum direview
         _popupShown = false;
       }
     });
@@ -188,6 +262,10 @@ class _OrdersTabState extends State<OrdersTab> {
               statusText = order.status;
           }
 
+          final int? orderIdInt = _toIntOrderId(order.bookingId);
+          final Future<PaymentModel?>? payFuture =
+              (orderIdInt != null) ? _getLatestPayment(orderIdInt) : null;
+
           return GestureDetector(
             onTap: () {
               Navigator.push(
@@ -214,76 +292,152 @@ class _OrdersTabState extends State<OrdersTab> {
                 ),
               );
             },
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12.withOpacity(0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
+            child: FutureBuilder<PaymentModel?>(
+              future: payFuture,
+              builder: (context, snap) {
+                final latestPay = snap.data;
+
+                Color payColor = Colors.grey;
+                String payText = 'Belum bayar';
+                if (latestPay != null) {
+                  switch (latestPay.status) {
+                    case 'paid':
+                      payColor = Colors.green;
+                      payText = 'Paid';
+                      break;
+                    case 'pending':
+                      payColor = Colors.orange;
+                      payText = 'Pending';
+                      break;
+                    case 'failed':
+                      payColor = Colors.red;
+                      payText = 'Failed';
+                      break;
+                    case 'expired':
+                      payColor = Colors.redAccent;
+                      payText = 'Expired';
+                      break;
+                    default:
+                      payText = latestPay.status;
+                  }
+                }
+
+                final bool canPay = (orderIdInt != null) &&
+                    (latestPay == null || latestPay.status != 'paid');
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12.withOpacity(0.08),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.asset(
-                      order.image,
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          order.title,
-                          style: const TextStyle(
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(
+                          order.image,
+                          width: 60,
+                          height: 60,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              order.title,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(order.date,
+                                style: const TextStyle(color: Colors.grey)),
+                            const SizedBox(height: 4),
+                            Text(
+                              order.location,
+                              style: const TextStyle(color: Colors.black54),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 3, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: payColor.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                        color: payColor.withOpacity(0.35)),
+                                  ),
+                                  child: Text(
+                                    'Payment: $payText',
+                                    style: TextStyle(
+                                      color: payColor,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                if (canPay)
+                                  SizedBox(
+                                    height: 28,
+                                    child: OutlinedButton(
+                                      onPressed: () =>
+                                          _payNow(context, orderIdInt!),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      child: const Text('Bayar',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: statusColor.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          statusText,
+                          style: TextStyle(
+                            color: statusColor,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 12,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(order.date,
-                            style: const TextStyle(color: Colors.grey)),
-                        const SizedBox(height: 4),
-                        Text(
-                          order.location,
-                          style: const TextStyle(color: Colors.black54),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
+                      )
+                    ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 4,
-                      horizontal: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      statusText,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                  )
-                ],
-              ),
+                );
+              },
             ),
           );
         },
