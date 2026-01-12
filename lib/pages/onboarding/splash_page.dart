@@ -29,7 +29,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
     );
 
-    _logoScale = Tween<double>(begin: 0.7, end: 1).animate(
+    _logoScale = Tween<double>(begin: 0.8, end: 1).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.easeOutBack),
     );
 
@@ -62,7 +62,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF5AA9E6),
+      backgroundColor: const Color(0xFF2F8AFF),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -72,28 +72,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
               child: FadeTransition(
                 opacity: _logoOpacity,
                 child: Image.asset(
-                  'assets/images/carwashgo_logo.png',
-                  height: 190,
+                  'assets/images/carwashgo_logo1.png',
+                  height: 300,
                 ),
               ),
             ),
-            const SizedBox(height: 30),
-            SlideTransition(
-              position: _textOffset,
-              child: FadeTransition(
-                opacity: _textOpacity,
-                child: const Text(
-                  "CarwashGo",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.3,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
             FadeTransition(
               opacity: _textOpacity,
               child: const Text(
