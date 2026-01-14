@@ -11,15 +11,13 @@ class HomeMitraPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              // ================= HEADER =================
+              
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -60,12 +58,13 @@ class HomeMitraPage extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // ============= INFO CARDS =============
+              
               Row(
                 children: [
                   Expanded(
                     child: _infoCard(
-                      onTap: () => Navigator.pushNamed(context, "/mitra-income"),
+                      onTap: () =>
+                          Navigator.pushNamed(context, "/mitra-income"),
                       icon: Icons.attach_money,
                       color: Colors.black,
                       title: "Rp 500.000",
@@ -101,7 +100,7 @@ class HomeMitraPage extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  // ✅ ✅ ✅ RATING TERHUBUNG KE REVIEW PROVIDER
+                  
                   Expanded(
                     child: Consumer<ReviewProvider>(
                       builder: (context, reviewProv, _) {
@@ -190,13 +189,12 @@ class HomeMitraPage extends StatelessWidget {
           ),
         ),
       ),
-
       bottomNavigationBar: const BottomNavMitra(currentIndex: 0),
     );
   }
 }
 
-// ================= INFO CARD WIDGET =================
+
 Widget _infoCard({
   required VoidCallback onTap,
   required IconData icon,
@@ -245,7 +243,7 @@ Widget _infoCard({
   );
 }
 
-// ================= BOOKING CARD WIDGET =================
+
 Widget _bookingCard(
   String name,
   String service,

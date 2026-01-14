@@ -42,7 +42,6 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
   }
 
   Widget _avatar(UserProvider user) {
-    // preview lokal
     if (kIsWeb && _webImage != null) {
       return ClipOval(
         child: Image.memory(_webImage!,
@@ -61,7 +60,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
       return ClipOval(
         child: Image.network(
           url,
-          key: ValueKey(url), // ✅ biar refresh kalau url berubah
+          key: ValueKey(url),
           width: 104,
           height: 104,
           fit: BoxFit.cover,
@@ -249,16 +248,17 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
   }
 
   @override
-  
   Future<void> _changeOutletLocation() async {
     final mitra = context.read<MitraProvider>();
     final user = context.read<UserProvider>();
 
-    // guard: minimal data
-    final phoneToSend =
-        user.phone.isNotEmpty ? user.phone : (mitra.phone.isNotEmpty ? mitra.phone : "");
+    final phoneToSend = user.phone.isNotEmpty
+        ? user.phone
+        : (mitra.phone.isNotEmpty ? mitra.phone : "");
 
-    if (mitra.businessName.isEmpty || mitra.alamat.isEmpty || phoneToSend.isEmpty) {
+    if (mitra.businessName.isEmpty ||
+        mitra.alamat.isEmpty ||
+        phoneToSend.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -270,7 +270,6 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
       return;
     }
 
-    // open map picker
     final picked = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const MapPickerPage()),
@@ -295,9 +294,11 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Lokasi lama: ${oldLat?.toStringAsFixed(5) ?? "-"}, ${oldLng?.toStringAsFixed(5) ?? "-"}"),
+              Text(
+                  "Lokasi lama: ${oldLat?.toStringAsFixed(5) ?? "-"}, ${oldLng?.toStringAsFixed(5) ?? "-"}"),
               const SizedBox(height: 6),
-              Text("Lokasi baru: ${newLat.toStringAsFixed(5)}, ${newLng.toStringAsFixed(5)}"),
+              Text(
+                  "Lokasi baru: ${newLat.toStringAsFixed(5)}, ${newLng.toStringAsFixed(5)}"),
               if (newAddress.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text("Alamat (perkiraan): $newAddress"),
@@ -333,7 +334,6 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
         longitude: newLng,
       );
 
-      // update provider agar UI langsung berubah
       context.read<MitraProvider>().setFromApi(
             businessName: profile.businessName,
             alamat: profile.address,
@@ -356,7 +356,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
     }
   }
 
-Widget build(BuildContext context) {
+  Widget build(BuildContext context) {
     final user = context.watch<UserProvider>();
     final mitra = context.watch<MitraProvider>();
 
@@ -438,7 +438,6 @@ Widget build(BuildContext context) {
             _infoTile(Icons.location_on, "Alamat Usaha", alamat),
             const SizedBox(height: 10),
             _infoTile(Icons.my_location, "Koordinat Outlet", koordinat),
-
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
@@ -461,8 +460,6 @@ Widget build(BuildContext context) {
               ),
             ),
             const SizedBox(height: 22),
-
-            // ====== CRUD Layanan Mitra ======
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -485,7 +482,6 @@ Widget build(BuildContext context) {
               ),
             ),
             const SizedBox(height: 12),
-
             SizedBox(
               width: double.infinity,
               height: 50,

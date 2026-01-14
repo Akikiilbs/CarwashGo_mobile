@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
-// ================= PROVIDERS =================
+
 import 'providers/notification_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/user_provider.dart';
@@ -12,10 +12,10 @@ import 'providers/mitra_provider.dart';
 import 'providers/station_provider.dart';
 import 'providers/partner_services_provider.dart';
 
-// ================= ROUTES =================
+
 import 'routes/app_routes.dart';
 
-// ================= THEME =================
+
 import 'core/theme/app_theme.dart';
 
 void main() {
@@ -67,7 +67,7 @@ class MyApp extends StatelessWidget {
 
       theme: _loadThemeSafely(),
 
-      // mulai dari splash
+      
       initialRoute: '/splash',
 
       routes: AppRoutes.routes,
