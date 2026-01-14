@@ -2,8 +2,12 @@
 
 class Order {
   /// ID mitra pemilik station.
-  /// Sekarang dibuat opsional karena belum selalu dikirim.
   final String? mitraId;
+
+  // ✅ TAMBAHAN UNTUK MAP
+  final int? partnerId;
+  final double? latitude;
+  final double? longitude;
 
   final String title;
   final String date;
@@ -25,7 +29,10 @@ class Order {
   final int total;
 
   Order({
-    this.mitraId,                // ✅ tidak wajib lagi
+    this.mitraId,
+    this.partnerId,
+    this.latitude,
+    this.longitude,
     required this.title,
     required this.date,
     required this.time,
@@ -46,9 +53,11 @@ class Order {
     required this.total,
   });
 
-  /// Optional: helper kalau nanti mau update sebagian field
   Order copyWith({
     String? mitraId,
+    int? partnerId,
+    double? latitude,
+    double? longitude,
     String? title,
     String? date,
     String? time,
@@ -70,6 +79,9 @@ class Order {
   }) {
     return Order(
       mitraId: mitraId ?? this.mitraId,
+      partnerId: partnerId ?? this.partnerId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
       title: title ?? this.title,
       date: date ?? this.date,
       time: time ?? this.time,

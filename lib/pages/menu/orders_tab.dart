@@ -260,6 +260,9 @@ class _OrdersTabState extends State<OrdersTab> {
                     total: order.total,
                     showDelete: false,
                     fromOrderPage: true,
+                    partnerId: order.partnerId ?? 0,
+                    customerLatitude: order.latitude ?? 0,
+                    customerLongitude: order.longitude ?? 0,
                   ),
                 ),
               );

@@ -145,8 +145,34 @@ class OrderProvider extends ChangeNotifier {
         ? (o['total_amount'] as num).toInt()
         : int.tryParse(o['total_amount']?.toString() ?? '') ?? 0;
 
+    // ✅ partner_id int (buat fetch koordinat mitra)
+    final int? partnerId = (o['partner_id'] is num)
+        ? (o['partner_id'] as num).toInt()
+        : int.tryParse(o['partner_id']?.toString() ?? '');
+
+    // ✅ koordinat customer
+    final double? latitude = (o['latitude'] is num)
+        ? (o['latitude'] as num).toDouble()
+        : double.tryParse(o['latitude']?.toString() ?? '');
+
+    final double? longitude = (o['longitude'] is num)
+        ? (o['longitude'] as num).toDouble()
+        : double.tryParse(o['longitude']?.toString() ?? '');
+
+    // customer object kadang ada, kadang tidak
+    final customer = (o['customer'] is Map)
+        ? Map<String, dynamic>.from(o['customer'])
+        : null;
+
     return Order(
+      // yang lama tetap
       mitraId: partner?['id']?.toString(),
+
+      // ✅ tambahan untuk map
+      partnerId: partnerId,
+      latitude: latitude,
+      longitude: longitude,
+
       title: title,
       date: date,
       time: time,
@@ -154,9 +180,13 @@ class OrderProvider extends ChangeNotifier {
       image: 'assets/images/on1.png',
       location: (o['address'] ?? '').toString(),
       detailAddress: '',
+
       plateNumber: (o['plate_number'] ?? '').toString(),
-      username: (o['customer']?['name'] ?? '').toString(),
-      phoneNumber: '',
+      username: (customer?['name'] ?? '').toString(),
+
+      // kalau backend belum kirim phone, tetap kosong
+      phoneNumber: (customer?['phone'] ?? '').toString(),
+
       bookingId: (o['id'] ?? '').toString(),
       carType: (o['vehicle_model'] ?? '').toString().isNotEmpty
           ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'
@@ -188,8 +218,29 @@ class OrderProvider extends ChangeNotifier {
         ? (o['total_amount'] as num).toInt()
         : int.tryParse(o['total_amount']?.toString() ?? '') ?? 0;
 
+    // ✅ partnerId int (id mitra)
+    final int? partnerId = (o['partner_id'] is num)
+        ? (o['partner_id'] as num).toInt()
+        : int.tryParse(o['partner_id']?.toString() ?? '');
+
+    // ✅ koordinat customer (buat map & jarak)
+    final double? latitude = (o['latitude'] is num)
+        ? (o['latitude'] as num).toDouble()
+        : double.tryParse(o['latitude']?.toString() ?? '');
+
+    final double? longitude = (o['longitude'] is num)
+        ? (o['longitude'] as num).toDouble()
+        : double.tryParse(o['longitude']?.toString() ?? '');
+
     return Order(
+      // biarin yang lama tetap ada kalau masih dipakai logic lain
       mitraId: (o['partner_id'] ?? '').toString(),
+
+      // ✅ tambahan untuk detail mitra
+      partnerId: partnerId,
+      latitude: latitude,
+      longitude: longitude,
+
       title: title,
       date: date,
       time: time,
@@ -199,7 +250,7 @@ class OrderProvider extends ChangeNotifier {
       detailAddress: '',
       plateNumber: (o['plate_number'] ?? '').toString(),
       username: title,
-      phoneNumber: '',
+      phoneNumber: (customer?['phone'] ?? '').toString(),
       bookingId: (o['id'] ?? '').toString(),
       carType: (o['vehicle_model'] ?? '').toString().isNotEmpty
           ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'

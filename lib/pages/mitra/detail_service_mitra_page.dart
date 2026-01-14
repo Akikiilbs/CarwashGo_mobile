@@ -1,12 +1,15 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/network/dio_client.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
 
 class DetailServiceMitraPage extends StatefulWidget {
   final Order order;
-
   const DetailServiceMitraPage({super.key, required this.order});
 
   @override
@@ -14,13 +17,453 @@ class DetailServiceMitraPage extends StatefulWidget {
 }
 
 class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
-  late String _status;
-  bool _saving = false;
+  final Dio _dio = DioClient().dio;
+
+  String? _resolvedCustomerAddress;
+  bool _loadingAddress = false;
+
+  LatLng? _mitraLatLng;
+  bool _loadingMitra = false;
+
+  LatLng? get _customerLatLng {
+    final lat = widget.order.latitude;
+    final lng = widget.order.longitude;
+    if (lat == null || lng == null) return null;
+    return LatLng(lat, lng);
+  }
 
   @override
   void initState() {
     super.initState();
-    _status = widget.order.status;
+    _resolveCustomerAddressIfNeeded();
+    _loadMitraLocation();
+  }
+
+  // =========================
+  // Reverse geocode alamat customer (biar bukan koordinat)
+  // =========================
+  Future<void> _resolveCustomerAddressIfNeeded() async {
+    final c = _customerLatLng;
+    if (c == null) return;
+
+    final lower = widget.order.location.toLowerCase();
+    final looksCoord =
+        lower.contains('latitude') || lower.contains('longitude');
+    if (!looksCoord && widget.order.location.trim().isNotEmpty) return;
+
+    setState(() => _loadingAddress = true);
+    try {
+      final addr = await _reverseGeocode(c.latitude, c.longitude);
+      if (!mounted) return;
+      setState(() => _resolvedCustomerAddress = addr);
+    } catch (_) {
+      // ignore
+    } finally {
+      if (mounted) setState(() => _loadingAddress = false);
+    }
+  }
+
+  Future<String?> _reverseGeocode(double lat, double lon) async {
+    final dio = Dio(
+      BaseOptions(headers: {'User-Agent': 'CarWashGo/1.0 (reverse-geocode)'}),
+    );
+
+    final res = await dio.get(
+      'https://nominatim.openstreetmap.org/reverse',
+      queryParameters: {'format': 'jsonv2', 'lat': lat, 'lon': lon},
+    );
+
+    final data = res.data;
+    if (data is Map && data['display_name'] is String) {
+      final s = (data['display_name'] as String).trim();
+      return s.isEmpty ? null : s;
+    }
+    return null;
+  }
+
+  // =========================
+  // Ambil koordinat mitra dari endpoint mitra login
+  // GET /api/v1/partner/profile
+  // =========================
+  Future<void> _loadMitraLocation() async {
+    setState(() => _loadingMitra = true);
+    try {
+      final res = await _dio.get('/partner/profile');
+      final body = res.data;
+
+      final data = (body is Map && body['data'] is Map)
+          ? Map<String, dynamic>.from(body['data'])
+          : <String, dynamic>{};
+
+      final lat = _toDouble(data['latitude']);
+      final lng = _toDouble(data['longitude']);
+
+      if (lat != null && lng != null) {
+        if (!mounted) return;
+        setState(() => _mitraLatLng = LatLng(lat, lng));
+      }
+    } catch (_) {
+      // ignore
+    } finally {
+      if (mounted) setState(() => _loadingMitra = false);
+    }
+  }
+
+  double? _toDouble(dynamic v) {
+    if (v == null) return null;
+    if (v is num) return v.toDouble();
+    return double.tryParse(v.toString());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final o = widget.order;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF6F8FF),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black87,
+        title: const Text('Detail Pesanan'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _cardInfo(o),
+            const SizedBox(height: 14),
+            _cardUpdateStatus(o),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.arrow_back),
+                label: const Text('Kembali'),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(String title, String value, {bool bold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _labelPayment(String p) {
+    final st = p.toLowerCase();
+    final isPaid = st == 'paid' || st == 'settlement' || st == 'capture';
+    return isPaid ? 'Sudah Bayar' : 'Belum Bayar';
+  }
+
+  Widget _cardInfo(Order o) {
+    final customer = _customerLatLng;
+    final mitra = _mitraLatLng;
+
+    final addressText = (_resolvedCustomerAddress?.trim().isNotEmpty == true)
+        ? _resolvedCustomerAddress!.trim()
+        : (o.location.toLowerCase().contains('latitude')
+            ? 'Alamat belum tersedia'
+            : o.location.trim());
+
+    final distanceKm = (customer != null && mitra != null)
+        ? const Distance().as(LengthUnit.Kilometer, customer, mitra)
+        : null;
+
+    final center = (customer != null && mitra != null)
+        ? LatLng(
+            (customer.latitude + mitra.latitude) / 2,
+            (customer.longitude + mitra.longitude) / 2,
+          )
+        : (customer ?? const LatLng(-6.200000, 106.816666));
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // =========================
+          // HEADER
+          // =========================
+          Text(
+            o.title, // nama customer
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+
+          // =========================
+          // SEMUA DATA ORDER
+          // =========================
+          _infoRow("Booking ID", o.bookingId),
+          _infoRow("Jadwal", "${o.date} ${o.time}"),
+          _infoRow("Jenis Mobil", o.carType.isEmpty ? "-" : o.carType),
+          _infoRow("Plat", o.plateNumber.isEmpty ? "-" : o.plateNumber),
+          _infoRow("Status", _labelStatus(o.status)),
+          _infoRow("Pembayaran", _labelPayment(o.paymentStatus)),
+          const SizedBox(height: 10),
+          const Divider(),
+
+          _infoRow("Harga Layanan", "Rp ${o.servicePrice}"),
+          _infoRow("Pajak", "Rp ${o.tax}"),
+          _infoRow("Diskon", "${o.discount}%"),
+          const Divider(),
+          _infoRow("Total", "Rp ${o.total}", bold: true),
+
+          const SizedBox(height: 14),
+
+          // =========================
+          // ALAMAT + MAP + JARAK
+          // =========================
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Alamat Lengkap",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                if (_loadingAddress)
+                  const Text(
+                    'Mengambil alamat...',
+                    style: TextStyle(color: Colors.black54),
+                  )
+                else ...[
+                  Text(addressText),
+                  if (o.detailAddress.trim().isNotEmpty)
+                    Text(o.detailAddress.trim()),
+                ],
+                if (_loadingMitra)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Mengambil lokasi mitra...',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  )
+                else if (distanceKm != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Jarak ke lokasi mitra: ${distanceKm.toStringAsFixed(2)} km',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    height: 190,
+                    child: FlutterMap(
+                      options: MapOptions(
+                        initialCenter: center,
+                        initialZoom: 13,
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.drag |
+                              InteractiveFlag.pinchZoom |
+                              InteractiveFlag.doubleTapZoom,
+                        ),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'carwashgo',
+                        ),
+                        if (customer != null && mitra != null)
+                          PolylineLayer(
+                            polylines: [
+                              Polyline(
+                                points: [customer, mitra],
+                                strokeWidth: 4,
+                                color: Colors.blueAccent,
+                              ),
+                            ],
+                          ),
+                        MarkerLayer(
+                          markers: [
+                            if (customer != null)
+                              Marker(
+                                point: customer,
+                                width: 44,
+                                height: 44,
+                                child: const Icon(
+                                  Icons.person_pin_circle,
+                                  color: Colors.redAccent,
+                                  size: 40,
+                                ),
+                              ),
+                            if (mitra != null)
+                              Marker(
+                                point: mitra,
+                                width: 44,
+                                height: 44,
+                                child: const Icon(
+                                  Icons.location_pin,
+                                  color: Colors.blueAccent,
+                                  size: 40,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cardUpdateStatus(Order o) {
+    // tombol status: accepted, on_the_way, in_progress, completed
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Update Status',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _statusBtn('Diterima', 'accepted', o),
+              _statusBtn('Menuju Lokasi', 'on_the_way', o),
+              _statusBtn('Dalam Pengerjaan', 'in_progress', o),
+              _statusBtn('Selesai', 'completed', o),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  bool _isPaid(String paymentStatus) {
+    final st = paymentStatus.toLowerCase();
+    return st == 'paid' || st == 'settlement' || st == 'capture';
+  }
+
+  bool _isFinalStatus(String status) {
+    final st = status.toLowerCase();
+    return st == 'completed' || st == 'rejected' || st == 'cancelled';
+  }
+
+  bool _canUpdateStatus(Order o, String targetStatus) {
+    // kalau sudah final -> tidak boleh update apapun
+    if (_isFinalStatus(o.status)) return false;
+
+    // kalau target sama dengan status sekarang -> disable
+    if (o.status == targetStatus) return false;
+
+    // aturan backend:
+    // - accepted boleh walau belum paid
+    // - on_the_way / in_progress / completed hanya boleh kalau paid
+    final paid = _isPaid(o.paymentStatus);
+
+    if (targetStatus == 'accepted') return true;
+    if (!paid) return false;
+
+    return true;
+  }
+
+  Widget _statusBtn(String label, String status, Order o) {
+    final orderId = int.tryParse(o.bookingId) ?? 0;
+    final enabled = orderId != 0 && _canUpdateStatus(o, status);
+
+    return SizedBox(
+      height: 36,
+      child: ElevatedButton(
+        onPressed: !enabled
+            ? null
+            : () async {
+                final prov = context.read<OrderProvider>();
+
+                // ✅ FIX: named arguments
+                final res = await prov.partnerUpdateStatus(
+                  orderId: orderId,
+                  status: status,
+                );
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(res.message)),
+                );
+                await prov.loadPartnerOrders();
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: enabled ? Colors.blueAccent : Colors.grey.shade300,
+          foregroundColor: enabled ? Colors.white : Colors.black54,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ),
+    );
   }
 
   String _labelStatus(String s) {
@@ -42,165 +485,5 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
       default:
         return s;
     }
-  }
-
-  List<String> _allowedNextStatuses(String current) {
-    // boleh bebas (biar tidak ngeblok partner saat testing)
-    // (backend juga akan validasi)
-    const all = ['accepted', 'on_the_way', 'in_progress', 'completed'];
-    if (current == 'completed' || current == 'rejected' || current == 'cancelled') return const [];
-    if (current == 'pending') return const ['accepted'];
-    return all;
-  }
-
-  Future<void> _updateStatus(String newStatus) async {
-    final orderId = int.tryParse(widget.order.bookingId) ?? 0;
-    if (orderId == 0) return;
-
-    setState(() => _saving = true);
-    final res = await context.read<OrderProvider>().partnerUpdateStatus(orderId: orderId, status: newStatus);
-    if (!mounted) return;
-
-    setState(() => _saving = false);
-
-    if (res.isSuccess) {
-      setState(() => _status = newStatus);
-      await context.read<OrderProvider>().loadPartnerOrders();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Status diperbarui: ${_labelStatus(newStatus)}')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message)),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final o = widget.order;
-    final next = _allowedNextStatuses(_status);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Pesanan'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
-        elevation: 0,
-      ),
-      backgroundColor: const Color(0xFFF6F8FF),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12.withOpacity(0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
-                  )
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    o.title,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  Text('Jadwal: ${o.date} ${o.time}', style: const TextStyle(color: Colors.black54)),
-                  const SizedBox(height: 6),
-                  Text('Plat: ${o.plateNumber}', style: const TextStyle(color: Colors.black54)),
-                  const SizedBox(height: 6),
-                  Text('Alamat: ${o.location}', maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      const Icon(Icons.flag, size: 18, color: Colors.blueAccent),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Status: ${_labelStatus(_status)}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            if (next.isEmpty)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Text(
-                  'Tidak ada perubahan status (order sudah final).',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              )
-            else
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Update Status', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
-                      children: next.map((s) {
-                        return ElevatedButton(
-                          onPressed: _saving ? null : () => _updateStatus(s),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: _saving
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : Text(_labelStatus(s)),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-
-            const Spacer(),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Kembali'),
-              ),
-            )
-          ],
-        ),
-      ),
-    );
   }
 }

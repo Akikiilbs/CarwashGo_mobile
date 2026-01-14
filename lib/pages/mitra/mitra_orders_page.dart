@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -14,6 +15,72 @@ class MitraOrdersPage extends StatefulWidget {
 }
 
 class _MitraOrdersPageState extends State<MitraOrdersPage> {
+  final Map<String, String> _addrCache = {};
+
+  bool _looksLikeCoord(String s) {
+    final lower = s.toLowerCase();
+    return lower.contains('latitude') || lower.contains('longitude');
+  }
+
+  Future<String?> _reverseGeocode(double lat, double lon) async {
+    final dio = Dio(
+      BaseOptions(headers: {'User-Agent': 'CarWashGo/1.0 (reverse-geocode)'}),
+    );
+
+    final res = await dio.get(
+      'https://nominatim.openstreetmap.org/reverse',
+      queryParameters: {'format': 'jsonv2', 'lat': lat, 'lon': lon},
+    );
+
+    final data = res.data;
+    if (data is Map && data['display_name'] is String) {
+      final s = (data['display_name'] as String).trim();
+      return s.isEmpty ? null : s;
+    }
+    return null;
+  }
+
+  Future<String> _getPrettyAddress(Order o) async {
+    // kalau sudah ada cache -> pakai
+    final key = o.bookingId;
+    if (_addrCache.containsKey(key)) return _addrCache[key]!;
+
+    // kalau bukan koordinat -> tampilkan lokasi apa adanya
+    if (!_looksLikeCoord(o.location)) {
+      _addrCache[key] = o.location;
+      return o.location;
+    }
+
+    // butuh lat/lng dari model order
+    final lat = o.latitude;
+    final lng = o.longitude;
+    if (lat == null || lng == null) {
+      _addrCache[key] = o.location;
+      return o.location;
+    }
+
+    final addr = await _reverseGeocode(lat, lng);
+    final finalAddr =
+        (addr == null || addr.trim().isEmpty) ? o.location : addr.trim();
+    _addrCache[key] = finalAddr;
+    return finalAddr;
+  }
+
+  Widget _addressLine(Order o, {int maxLines = 1}) {
+    return FutureBuilder<String>(
+      future: _getPrettyAddress(o),
+      builder: (context, snap) {
+        final text = snap.data ?? o.location;
+        return Text(
+          text,
+          maxLines: maxLines,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Colors.black54),
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -66,7 +133,8 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
-                        onPressed: () => context.read<OrderProvider>().loadPartnerOrders(),
+                        onPressed: () =>
+                            context.read<OrderProvider>().loadPartnerOrders(),
                         child: const Text('Coba lagi'),
                       )
                     ],
@@ -75,11 +143,14 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
               );
             }
 
-            final newOrders = orders.where((o) => o.status == 'pending').toList();
-            final activeOrders = orders.where((o) => o.status != 'pending').toList();
+            final newOrders =
+                orders.where((o) => o.status == 'pending').toList();
+            final activeOrders =
+                orders.where((o) => o.status != 'pending').toList();
 
             return RefreshIndicator(
-              onRefresh: () => context.read<OrderProvider>().loadPartnerOrders(),
+              onRefresh: () =>
+                  context.read<OrderProvider>().loadPartnerOrders(),
               child: TabBarView(
                 children: [
                   _listNewOrders(context, newOrders),
@@ -135,7 +206,8 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
                   Expanded(
                     child: Text(
                       o.title,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                   ),
                   Row(
@@ -150,7 +222,14 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
               const SizedBox(height: 8),
               Text('Jadwal: ${o.date} ${o.time}'),
               const SizedBox(height: 4),
-              Text('Alamat: ${o.location}', maxLines: 2, overflow: TextOverflow.ellipsis),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Alamat: ',
+                      style: TextStyle(color: Colors.black87)),
+                  Expanded(child: _addressLine(o, maxLines: 2)),
+                ],
+              ),
               const SizedBox(height: 4),
               Text('Plat: ${o.plateNumber.isEmpty ? '-' : o.plateNumber}'),
               const SizedBox(height: 12),
@@ -161,31 +240,42 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
                       onPressed: orderId == 0
                           ? null
                           : () async {
-                              final res = await context.read<OrderProvider>().partnerReject(orderId);
+                              final res = await context
+                                  .read<OrderProvider>()
+                                  .partnerReject(orderId);
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(content: Text(res.message)));
-                              await context.read<OrderProvider>().loadPartnerOrders();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(res.message)));
+                              await context
+                                  .read<OrderProvider>()
+                                  .loadPartnerOrders();
                             },
                       icon: const Icon(Icons.close, color: Colors.redAccent),
-                      label: const Text('Tolak', style: TextStyle(color: Colors.redAccent)),
+                      label: const Text('Tolak',
+                          style: TextStyle(color: Colors.redAccent)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent),
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent),
                       onPressed: orderId == 0
                           ? null
                           : () async {
-                              final res = await context.read<OrderProvider>().partnerAccept(orderId);
+                              final res = await context
+                                  .read<OrderProvider>()
+                                  .partnerAccept(orderId);
                               if (!context.mounted) return;
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(content: Text(res.message)));
-                              await context.read<OrderProvider>().loadPartnerOrders();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(res.message)));
+                              await context
+                                  .read<OrderProvider>()
+                                  .loadPartnerOrders();
                             },
                       icon: const Icon(Icons.check, color: Colors.white),
-                      label: const Text('Terima', style: TextStyle(color: Colors.white)),
+                      label: const Text('Terima',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],
@@ -217,7 +307,8 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => DetailServiceMitraPage(order: o)),
+              MaterialPageRoute(
+                  builder: (_) => DetailServiceMitraPage(order: o)),
             ).then((_) {
               // refresh setelah balik
               context.read<OrderProvider>().loadPartnerOrders();
@@ -250,26 +341,31 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      Text('${o.date} ${o.time}', style: const TextStyle(color: Colors.black54)),
+                      Text('${o.date} ${o.time}',
+                          style: const TextStyle(color: Colors.black54)),
                       const SizedBox(height: 4),
-                      Text(o.location, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      if (o.status == 'accepted' && o.paymentStatus != 'paid') ...[
+                      _addressLine(o, maxLines: 1),
+                      if (o.status == 'accepted' &&
+                          o.paymentStatus != 'paid') ...[
                         const SizedBox(height: 6),
                         const Text(
                           'Menunggu pembayaran customer',
-                          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.w600, fontSize: 12),
+                          style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12),
                         ),
                       ],
                     ],
                   ),
                 ),
                 Row(
-                children: [
-                  _StatusBadge(status: o.status),
-                  const SizedBox(width: 8),
-                  _PaymentBadge(paymentStatus: o.paymentStatus),
-                ],
-              ),
+                  children: [
+                    _StatusBadge(status: o.status),
+                    const SizedBox(width: 8),
+                    _PaymentBadge(paymentStatus: o.paymentStatus),
+                  ],
+                ),
               ],
             ),
           ),
@@ -278,7 +374,6 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
     );
   }
 }
-
 
 class _PaymentBadge extends StatelessWidget {
   final String paymentStatus;
@@ -300,7 +395,8 @@ class _PaymentBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }
@@ -357,7 +453,8 @@ class _StatusBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12),
       ),
     );
   }
