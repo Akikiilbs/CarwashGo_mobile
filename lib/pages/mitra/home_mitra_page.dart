@@ -2,22 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/review_provider.dart';
+import '../../providers/wallet_provider.dart';
 import '../navigation/bottom_nav_mitra.dart';
 
-class HomeMitraPage extends StatelessWidget {
+class HomeMitraPage extends StatefulWidget {
   const HomeMitraPage({super.key});
+
+  @override
+  State<HomeMitraPage> createState() => _HomeMitraPageState();
+}
+
+class _HomeMitraPageState extends State<HomeMitraPage> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (!mounted) return;
+      context.read<WalletProvider>().loadAll();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              
+
+              // ================= HEADER =================
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -58,16 +75,17 @@ class HomeMitraPage extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              
+              // ============= INFO CARDS =============
               Row(
                 children: [
                   Expanded(
                     child: _infoCard(
-                      onTap: () =>
-                          Navigator.pushNamed(context, "/mitra-income"),
+                      onTap: () => Navigator.pushNamed(context, "/mitra-income"),
                       icon: Icons.attach_money,
                       color: Colors.black,
-                      title: "Rp 500.000",
+                      title: context.watch<WalletProvider>().summary == null
+                          ? "Rp 0"
+                          : _rupiah(context.watch<WalletProvider>().summary!.totalNetEarned),
                       subtitle: "Pendapatan hari ini",
                     ),
                   ),
@@ -100,7 +118,7 @@ class HomeMitraPage extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
 
-                  
+                  // ✅ ✅ ✅ RATING TERHUBUNG KE REVIEW PROVIDER
                   Expanded(
                     child: Consumer<ReviewProvider>(
                       builder: (context, reviewProv, _) {
@@ -189,12 +207,13 @@ class HomeMitraPage extends StatelessWidget {
           ),
         ),
       ),
+
       bottomNavigationBar: const BottomNavMitra(currentIndex: 0),
     );
   }
 }
 
-
+// ================= INFO CARD WIDGET =================
 Widget _infoCard({
   required VoidCallback onTap,
   required IconData icon,
@@ -243,7 +262,7 @@ Widget _infoCard({
   );
 }
 
-
+// ================= BOOKING CARD WIDGET =================
 Widget _bookingCard(
   String name,
   String service,
@@ -292,4 +311,14 @@ Widget _bookingCard(
       ],
     ),
   );
+}
+
+String _rupiah(int value) {
+  final s = value.toString();
+  final rev = s.split('').reversed.toList();
+  final chunks = <String>[];
+  for (var i = 0; i < rev.length; i += 3) {
+    chunks.add(rev.skip(i).take(3).toList().reversed.join());
+  }
+  return 'Rp ${chunks.reversed.join('.')}' ;
 }
