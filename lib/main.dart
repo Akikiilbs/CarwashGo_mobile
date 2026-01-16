@@ -6,9 +6,10 @@ import 'providers/notification_provider.dart';
 import 'providers/order_provider.dart';
 import 'providers/user_provider.dart';
 import 'providers/review_provider.dart';
-import 'providers/mitra_provider.dart'; 
+import 'providers/mitra_provider.dart';
 import 'providers/station_provider.dart';
 import 'providers/wallet_provider.dart';
+import 'providers/partner_services_provider.dart';
 
 // ================= ROUTES =================
 import 'routes/app_routes.dart';
@@ -26,9 +27,11 @@ void main() {
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => ReviewProvider()),
-        ChangeNotifierProvider(create: (_) => MitraProvider()), 
+        ChangeNotifierProvider(create: (_) => MitraProvider()),
         ChangeNotifierProvider(create: (_) => StationProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => PartnerServicesProvider(),
+        ),
       ],
       child: const MyApp(),
     ),
