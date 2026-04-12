@@ -1,302 +1,451 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import '../../features/order/data/order_api.dart';
-import '../../features/order/models/simple_api_response.dart';
+import 'package:carwashgo/core/network/dio_client.dart';
+import '../../features/partner/models/meta_models.dart';
+import '../../features/partner/models/partner_service_dto.dart';
+import '../../providers/user_provider.dart';
 import '../../providers/order_provider.dart';
 import '../map/map_picker_page.dart';
+import 'detail_service_page.dart';
+import '../navigation/bottom_nav.dart';
 
 class BookingPage extends StatefulWidget {
-  /// serviceItem dari marketplace: {
-  ///   partner_service_id, price,
-  ///   partner{id,business_name,address},
-  ///   service{id,name,description},
-  ///   vehicle_type{id,name}
-  /// }
-  final Map<String, dynamic>? serviceItem;
-
-  const BookingPage({super.key, this.serviceItem});
+  final String partnerId;
+  const BookingPage({super.key, required this.partnerId});
 
   @override
   State<BookingPage> createState() => _BookingPageState();
 }
 
 class _BookingPageState extends State<BookingPage> {
-  final _orderApi = OrderApi();
+  // Data dinamis dari API
+  List<VehicleTypeDto> _vTypes = [];
+  List<PartnerServiceDto> _allServices = [];
+  bool _loading = true;
 
-  String _address = '';
-  double? _lat;
-  double? _lng;
+  List<String> _availableDates = [];
+  List<String> _availableTimes = [];
+  
+  VehicleTypeDto? _selectedVType;
+  PartnerServiceDto? _selectedPService;
+  String? selectedAddress;
+  double? latitude;
+  double? longitude;
 
-  late DateTime _selectedDate;
-  String _selectedTime = '09:00';
+  int selectedDateIndex = 0;
+  int selectedTimeIndex = -1;
+  double selectedDistance = 0;
+  final int tax = 5000;
+  final int discountPercent = 0;
 
-  final _plateController = TextEditingController();
-  final _brandController = TextEditingController();
-  final _modelController = TextEditingController();
-  final _colorController = TextEditingController();
-  final _notesController = TextEditingController();
+  final TextEditingController detailAddressController = TextEditingController();
+  final TextEditingController plateNumberController = TextEditingController();
 
-  bool _loading = false;
+  Map<int, String> _dayMap = {
+    DateTime.monday: "Senin",
+    DateTime.tuesday: "Selasa",
+    DateTime.wednesday: "Rabu",
+    DateTime.thursday: "Kamis",
+    DateTime.friday: "Jumat",
+    DateTime.saturday: "Sabtu",
+    DateTime.sunday: "Minggu",
+  };
 
   @override
   void initState() {
     super.initState();
-    _selectedDate = DateTime.now().add(const Duration(days: 1));
+    _loadMeta();
   }
 
-  @override
-  void dispose() {
-    _plateController.dispose();
-    _brandController.dispose();
-    _modelController.dispose();
-    _colorController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  List<DateTime> get _next7Days {
-    final today = DateTime.now();
-    return List.generate(7, (i) {
-      final d = today.add(Duration(days: i));
-      return DateTime(d.year, d.month, d.day);
-    });
-  }
-
-  List<String> get _timeSlots => const [
-        '08:00',
-        '09:00',
-        '10:00',
-        '11:00',
-        '12:00',
-        '13:00',
-        '14:00',
-        '15:00',
-        '16:00',
-        '17:00',
-      ];
-
-  String _two(int v) => v < 10 ? '0$v' : '$v';
-  String _fmtYmd(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
-
-  int _priceFromServiceItem() {
-    final item = widget.serviceItem;
-    if (item == null) return 0;
-    final p = item['price'];
-    if (p is num) return p.toInt();
-    return int.tryParse(p?.toString() ?? '') ?? 0;
-  }
-
-  Future<void> _pickAddress() async {
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(builder: (_) => const MapPickerPage()),
-    );
-    if (result == null) return;
-
-    setState(() {
-      _address = (result['address'] ?? '').toString();
-      _lat = result['latitude'] is num
-          ? (result['latitude'] as num).toDouble()
-          : null;
-      _lng = result['longitude'] is num
-          ? (result['longitude'] as num).toDouble()
-          : null;
-    });
-  }
-
-  Future<void> _submitOrder() async {
-    final item = widget.serviceItem;
-    if (item == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Silakan pilih layanan dari Home terlebih dahulu.')),
-      );
-      return;
-    }
-
-    if (_address.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alamat wajib diisi.')),
-      );
-      return;
-    }
-
-    final partner = item['partner'] is Map
-        ? Map<String, dynamic>.from(item['partner'])
-        : null;
-    final vehicleType = item['vehicle_type'] is Map
-        ? Map<String, dynamic>.from(item['vehicle_type'])
-        : null;
-
-    final partnerId = int.tryParse(partner?['id']?.toString() ?? '') ?? 0;
-    final vehicleTypeId =
-        int.tryParse(vehicleType?['id']?.toString() ?? '') ?? 0;
-
-    final partnerServiceId = int.tryParse(
-            (item['partner_service_id'] ?? item['id'])?.toString() ?? '') ??
-        0;
-
-    if (partnerId == 0 || vehicleTypeId == 0 || partnerServiceId == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content:
-                Text('Data layanan tidak lengkap (partner/service/vehicle).')),
-      );
-      return;
-    }
-
-    setState(() => _loading = true);
-
-    SimpleApiResponse res;
+  Future<void> _loadMeta() async {
     try {
-      res = await _orderApi.createOrderV2(
-        partnerId: partnerId,
-        vehicleTypeId: vehicleTypeId,
-        vehicleBrand: _brandController.text.trim().isEmpty
-            ? null
-            : _brandController.text.trim(),
-        vehicleModel: _modelController.text.trim().isEmpty
-            ? null
-            : _modelController.text.trim(),
-        vehicleColor: _colorController.text.trim().isEmpty
-            ? null
-            : _colorController.text.trim(),
-        plateNumber: _plateController.text.trim().isEmpty
-            ? null
-            : _plateController.text.trim(),
-        address: _address.trim(),
-        latitude: _lat,
-        longitude: _lng,
-        scheduledDate: _fmtYmd(_selectedDate),
-        scheduledTime: _selectedTime,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-        discount: 0,
-        paymentMethod: null,
-        items: [
-          {'partner_service_id': partnerServiceId, 'quantity': 1}
-        ],
-      );
-    } finally {
+      final dio = DioClient().dio;
+      final results = await Future.wait([
+        dio.get('/meta/vehicle-types'),
+        dio.get('/marketplace/services', queryParameters: {'partner_id': widget.partnerId}),
+        dio.get('/marketplace/partners', queryParameters: {'partner_id': widget.partnerId}),
+      ]);
+
+      final vTypes = (results[0].data['data'] as List)
+          .map((e) => VehicleTypeDto.fromJson(e as Map<String, dynamic>))
+          .toList();
+      
+      final pServices = (results[1].data['data'] as List)
+          .map((e) => PartnerServiceDto.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      final partnerData = (results[2].data['data'] as List).firstOrNull;
+      
+      // Parse operating constraints
+      String opDays = partnerData?['hariOperasional']?.toString() ?? partnerData?['operating_days']?.toString() ?? 'Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu';
+      String opHours = partnerData?['jamOperasional']?.toString() ?? partnerData?['operating_hours']?.toString() ?? '08:00,09:00,10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00';
+
+      if (opDays == 'Senin - Minggu' || opDays == 'Setiap Hari') {
+        opDays = 'Senin,Selasa,Rabu,Kamis,Jumat,Sabtu,Minggu';
+      }
+      if (opHours.contains(' - ')) {
+        // basic fallback for old "08.00 - 17.00" string
+        opHours = '08:00,09:00,10:00,11:00,12:00,13:00,14:00,15:00,16:00,17:00';
+      }
+
+      final List<String> activeDays = opDays.split(',').map((e) => e.trim()).toList();
+      final List<String> activeHours = opHours.split(',').map((e) => e.trim().replaceAll('.', ':')).toList();
+
+      // Generate dynamic dates (next 7 days, filtered by activeDays)
+      final List<String> filteredDates = [];
+      final daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      for (int i = 0; i < 14; i++) {
+        final d = DateTime.now().add(Duration(days: i));
+        final dayNameIndo = _dayMap[d.weekday];
+        if (activeDays.contains(dayNameIndo)) {
+          filteredDates.add("${daysShort[d.weekday % 7]} ${d.day}");
+        }
+        if (filteredDates.length >= 7) break;
+      }
+
+      setState(() {
+        _vTypes = vTypes;
+        _allServices = pServices;
+        _availableDates = filteredDates;
+        _availableTimes = activeHours;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint("❌ Error loading booking meta: $e");
       if (mounted) setState(() => _loading = false);
     }
+  }
 
-    if (!mounted) return;
+  int getServicePrice() => _selectedPService?.price ?? 0;
 
-    if (res.isSuccess) {
-      await context.read<OrderProvider>().loadCustomerOrders();
-      // Popup/snackbar sukses dihapus sesuai request.
-      Navigator.pushNamedAndRemoveUntil(context, '/menu', (route) => false);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message)),
-      );
-    }
+  int getDistancePrice() => (selectedDistance * 2000).round();
+
+  int calculateTotal() {
+    final subtotal = getServicePrice() + getDistancePrice();
+    final discountValue = ((subtotal + tax) * discountPercent / 100).round();
+    return subtotal + tax - discountValue;
+  }
+
+  String estimateDriverArrival() {
+    if (selectedDistance == 0) return "-";
+    int minutes = (selectedDistance * 3).round();
+    return "$minutes menit tiba";
   }
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.serviceItem;
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
-    final partner = item?['partner'] is Map
-        ? Map<String, dynamic>.from(item?['partner'])
-        : null;
-    final service = item?['service'] is Map
-        ? Map<String, dynamic>.from(item?['service'])
-        : null;
-    final vehicleType = item?['vehicle_type'] is Map
-        ? Map<String, dynamic>.from(item?['vehicle_type'])
-        : null;
-
-    final partnerName = partner?['business_name']?.toString() ?? '-';
-    final serviceName = service?['name']?.toString() ?? '-';
-    final vehicleTypeName = vehicleType?['name']?.toString() ?? '-';
-    final price = _priceFromServiceItem();
+    // Filter services based on vehicle type
+    final availableServices = _allServices.where((s) => s.vehicleTypeId == _selectedVType?.id).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Booking')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        centerTitle: true,
+        title: const Text("Booking CarWash", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(serviceName,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text('Mitra: $partnerName'),
-            Text('Tipe: $vehicleTypeName'),
-            Text('Harga: Rp $price'),
-            const SizedBox(height: 16),
-            ListTile(
-              title: Text(_address.isEmpty ? 'Pilih alamat' : _address),
-              subtitle: const Text('Gunakan map picker'),
-              trailing: const Icon(Icons.map),
-              onTap: _pickAddress,
-            ),
-            const SizedBox(height: 10),
-            const Text('Jadwal'),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              children: _next7Days.map((d) {
-                final selected = d == _selectedDate;
-                return ChoiceChip(
-                  label: Text('${d.day}/${d.month}'),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _selectedDate = d),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              children: _timeSlots.map((t) {
-                final selected = t == _selectedTime;
-                return ChoiceChip(
-                  label: Text(t),
-                  selected: selected,
-                  onSelected: (_) => setState(() => _selectedTime = t),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-                controller: _plateController,
-                decoration: const InputDecoration(labelText: 'Plat Nomor')),
-            TextField(
-                controller: _brandController,
-                decoration:
-                    const InputDecoration(labelText: 'Merk (opsional)')),
-            TextField(
-                controller: _modelController,
-                decoration:
-                    const InputDecoration(labelText: 'Model (opsional)')),
-            TextField(
-                controller: _colorController,
-                decoration:
-                    const InputDecoration(labelText: 'Warna (opsional)')),
-            TextField(
-                controller: _notesController,
-                decoration:
-                    const InputDecoration(labelText: 'Catatan (opsional)')),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: _loading ? null : _submitOrder,
-                child: _loading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2))
-                    : const Text('Buat Pesanan'),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.asset(
+                "assets/images/mobil1.png",
+                height: 180,
+                width: double.infinity,
+                fit: BoxFit.cover,
+                errorBuilder: (c, e, s) => Container(
+                  height: 180,
+                  width: double.infinity,
+                  color: Colors.grey.shade200,
+                  child: const Icon(Icons.directions_car_filled_rounded, size: 50, color: Colors.grey),
+                ),
               ),
             ),
+            const SizedBox(height: 25),
+            _buildDropdownVType(
+              hint: "Pilih Jenis Mobil",
+              value: _selectedVType,
+              items: _vTypes,
+              onChanged: (v) {
+                setState(() {
+                  _selectedVType = v;
+                  _selectedPService = null; // reset service when car type changes
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildDropdownPService(
+              hint: "Pilih Jenis Layanan",
+              value: _selectedPService,
+              items: availableServices,
+              onChanged: (v) => setState(() => _selectedPService = v),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MapPickerPage()),
+                );
+
+                if (result != null && result is Map && mounted) {
+                  setState(() {
+                    selectedAddress = result["address"]?.toString();
+                    selectedDistance = (result["distance"] as num?)?.toDouble() ?? 0.0;
+                    latitude = (result["latitude"] as num?)?.toDouble();
+                    longitude = (result["longitude"] as num?)?.toDouble();
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text("Pilih Lokasi di Peta", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+            if (selectedAddress != null) ...[
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                width: double.infinity,
+                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
+                child: Text("Alamat dipilih:\n$selectedAddress", style: const TextStyle(color: Colors.black87)),
+              ),
+            ],
+            const SizedBox(height: 20),
+            _buildSectionTitle("Detail Alamat"),
+            const SizedBox(height: 8),
+            TextField(
+              controller: detailAddressController,
+              maxLines: 2,
+              decoration: InputDecoration(
+                hintText: "Contoh: Perumahan Griya Indah Blok C No.12",
+                prefixIcon: const Icon(Icons.home_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildSectionTitle("Plat Kendaraan"),
+            const SizedBox(height: 8),
+            TextField(
+              controller: plateNumberController,
+              decoration: InputDecoration(
+                hintText: "Contoh: BP 1234 AB",
+                prefixIcon: const Icon(Icons.directions_car_filled_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 25),
+            _buildSectionTitle("Pilih Tanggal"),
+            const SizedBox(height: 12),
+            _buildDatePicker(),
+            const SizedBox(height: 20),
+            _buildSectionTitle("Pilih Jam"),
+            const SizedBox(height: 12),
+            _buildTimePicker(),
+            const SizedBox(height: 30),
+            _buildPriceSection(),
+            const SizedBox(height: 30),
+            _buildBookingButton(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) => Text(
+        title,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+      );
+
+  Widget _buildDropdownVType({
+    required String hint,
+    required VehicleTypeDto? value,
+    required List<VehicleTypeDto> items,
+    required ValueChanged<VehicleTypeDto?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blueAccent.withOpacity(0.5), width: 1.5),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<VehicleTypeDto>(
+          value: value,
+          hint: Text(hint),
+          isExpanded: true,
+          items: items.map((item) => DropdownMenuItem(value: item, child: Text(item.name))).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdownPService({
+    required String hint,
+    required PartnerServiceDto? value,
+    required List<PartnerServiceDto> items,
+    required ValueChanged<PartnerServiceDto?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blueAccent.withOpacity(0.5), width: 1.5),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<PartnerServiceDto>(
+          value: value,
+          hint: Text(hint),
+          isExpanded: true,
+          items: items.map((item) => DropdownMenuItem(value: item, child: Text("${item.serviceName ?? 'Layanan'} - Rp${item.price}"))).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDatePicker() {
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _availableDates.length,
+        itemBuilder: (context, index) {
+          final isSelected = selectedDateIndex == index;
+          return GestureDetector(
+            onTap: () => setState(() => selectedDateIndex = index),
+            child: Container(
+              width: 80,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blueAccent : Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _availableDates[index],
+                textAlign: TextAlign.center,
+                style: TextStyle(color: isSelected ? Colors.white : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTimePicker() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: List.generate(_availableTimes.length, (index) {
+        final isSelected = selectedTimeIndex == index;
+        return GestureDetector(
+          onTap: () => setState(() => selectedTimeIndex = index),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.blueAccent : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              _availableTimes[index],
+              style: TextStyle(color: isSelected ? Colors.white : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildPriceSection() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.withOpacity(0.1))),
+      child: Column(
+        children: [
+          _priceRow("Harga Layanan", getServicePrice()),
+          _priceRow("Biaya Antar", getDistancePrice(), suffix: " (${selectedDistance.toStringAsFixed(1)} km)"),
+          _priceRow("Pajak", tax),
+          if (discountPercent > 0) _priceRow("Diskon", discountPercent, suffix: "%"),
+          const Divider(height: 24),
+          _priceRow("Total Pembayaran", calculateTotal(), bold: true),
+          const SizedBox(height: 12),
+          Text("Driver ETA: ${estimateDriverArrival()}", style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+        ],
+      ),
+    );
+  }
+
+  Widget _priceRow(String title, int value, {bool bold = false, String suffix = ""}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title),
+          Text(suffix.isEmpty ? "Rp $value" : (suffix.startsWith(' ') ? "Rp $value$suffix" : "$value$suffix"), 
+               style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBookingButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 55,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(backgroundColor: Colors.blueAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+        onPressed: () {
+          if (selectedAddress == null || _selectedVType == null || _selectedPService == null || selectedTimeIndex == -1 || detailAddressController.text.isEmpty || plateNumberController.text.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Harap lengkapi semua data dulu.")));
+            return;
+          }
+          final user = context.read<UserProvider>();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DetailServicePage(
+                username: user.name.isEmpty ? "User CarWashGo" : user.name,
+                phoneNumber: user.phone.isEmpty ? "081234567890" : user.phone,
+                bookingId: DateTime.now().millisecondsSinceEpoch.toString().substring(7),
+                date: _availableDates[selectedDateIndex],
+                time: _availableTimes[selectedTimeIndex],
+                carType: _selectedVType!.name,
+                vehicleTypeId: _selectedVType!.id,
+                partnerServiceId: _selectedPService!.id,
+                price: _selectedPService!.price,
+                servicePrice: 0, // combined in dynamic
+                tax: tax,
+                discount: discountPercent,
+                address: selectedAddress!,
+                latitude: latitude,
+                longitude: longitude,
+                detailAddress: detailAddressController.text,
+                plateNumber: plateNumberController.text,
+                total: calculateTotal(),
+                partnerId: widget.partnerId,
+              ),
+            ),
+          );
+        },
+        child: const Text("Pesan Sekarang", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class DioClient {
@@ -12,14 +11,14 @@ class DioClient {
   DioClient._internal() {
     dio = Dio(
       BaseOptions(
-        baseUrl: 'https://49e8cb5e5020.ngrok-free.app/api/v1',
+        baseUrl:
+            'https://ee36-27-112-70-186.ngrok-free.app/api/v1',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
-        headers: const {
+        headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'okhttp',
+          'ngrok-skip-browser-warning': '69420',
         },
       ),
     );
@@ -32,30 +31,21 @@ class DioClient {
             if (token != null && token.isNotEmpty) {
               options.headers['Authorization'] = 'Bearer $token';
             }
+
+            print('➡️ [${options.method}] ${options.uri}');
           } catch (e) {
-            debugPrint('❌ [DIO] Token read error: $e');
+            print('❌ Token error: $e');
           }
 
-          debugPrint('➡️ [DIO] ${options.method} ${options.uri}');
-          debugPrint('Headers: ${options.headers}');
-          debugPrint('Query: ${options.queryParameters}');
-          debugPrint('Data: ${options.data}');
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          debugPrint(
-              '✅ [DIO] ${response.statusCode} ${response.requestOptions.uri}');
-          debugPrint('Response: ${response.data}');
+          print('✅ [${response.statusCode}] ${response.requestOptions.uri}');
           return handler.next(response);
         },
         onError: (DioException e, handler) {
-          debugPrint(
-              '❌ [DIO] ERROR ${e.requestOptions.method} ${e.requestOptions.uri}');
-          debugPrint('Type: ${e.type}');
-          debugPrint('Message: ${e.message}');
-          debugPrint('Status: ${e.response?.statusCode}');
-          debugPrint('Response: ${e.response?.data}');
-          debugPrint('Stack: ${e.stackTrace}');
+          print('❌ [${e.response?.statusCode}] ${e.requestOptions.uri}');
+          print('Message: ${e.message}');
           return handler.next(e);
         },
       ),

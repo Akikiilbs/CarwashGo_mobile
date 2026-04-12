@@ -60,6 +60,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
       return ClipOval(
         child: Image.network(
           url,
+          headers: const {'ngrok-skip-browser-warning': '69420'},
           key: ValueKey(url),
           width: 104,
           height: 104,
@@ -81,7 +82,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
       withData: kIsWeb,
@@ -328,7 +329,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
     try {
       final profile = await _partnerApi.updateProfile(
         businessName: mitra.businessName,
-        address: mitra.alamat,
+        address: newAddress.isNotEmpty ? newAddress : mitra.alamat,
         phone: phoneToSend,
         latitude: newLat,
         longitude: newLng,
@@ -435,28 +436,48 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
             const SizedBox(height: 10),
             _infoTile(Icons.storefront, "Nama Usaha", businessName),
             const SizedBox(height: 10),
-            _infoTile(Icons.location_on, "Alamat Usaha", alamat),
-            const SizedBox(height: 10),
-            _infoTile(Icons.my_location, "Koordinat Outlet", koordinat),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: OutlinedButton.icon(
-                icon: _updatingOutletLocation
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.edit_location_alt),
-                label: Text(
-                  _updatingOutletLocation
-                      ? "Memperbarui lokasi..."
-                      : "Ubah Lokasi Outlet",
-                ),
-                onPressed:
-                    _updatingOutletLocation ? null : _changeOutletLocation,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                     children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 24, color: Colors.blueAccent),
+                            const SizedBox(width: 12),
+                            const Text("Alamat Usaha", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ]
+                        ),
+                        TextButton(
+                           onPressed: _updatingOutletLocation ? null : _changeOutletLocation,
+                           style: TextButton.styleFrom(
+                             padding: EdgeInsets.zero,
+                             minimumSize: const Size(50, 30),
+                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                           ),
+                           child: _updatingOutletLocation
+                               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                               : const Text("Ubah", style: TextStyle(fontWeight: FontWeight.bold)),
+                        )
+                     ],
+                   ),
+                   const SizedBox(height: 10),
+                   Text(alamat, style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black54)),
+                   if (mitra.latitude != null && mitra.longitude != null) ...[
+                     const SizedBox(height: 6),
+                     Text("Titik Koordinat: ${mitra.latitude}, ${mitra.longitude}", style: const TextStyle(fontSize: 12, color: Colors.black38)),
+                   ]
+                ],
               ),
             ),
             const SizedBox(height: 22),

@@ -1,16 +1,9 @@
-import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
-// WEB API
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
-
-// MOBILE GPS
 import 'package:geolocator/geolocator.dart';
 
 class MapPickerPage extends StatefulWidget {
@@ -35,55 +28,45 @@ class _MapPickerPageState extends State<MapPickerPage> {
   // ===============================================================
   Future<void> searchLocation(String query) async {
     if (query.length < 3) {
-      setState(() => searchResults = []);
+      if (mounted) setState(() => searchResults = []);
       return;
     }
 
-    setState(() => searching = true);
+    if (mounted) setState(() => searching = true);
 
-    final uri = Uri.parse(
-        "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=5");
+    try {
+      final uri = Uri.parse(
+          "https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=5");
 
-    final response = await http.get(uri, headers: {
-      "User-Agent": "FlutterApp",
-    });
-
-    if (response.statusCode == 200) {
-      setState(() {
-        searchResults = jsonDecode(response.body);
+      final response = await http.get(uri, headers: {
+        "User-Agent": "FlutterApp",
       });
+
+      if (response.statusCode == 200 && mounted) {
+        setState(() {
+          searchResults = jsonDecode(response.body);
+        });
+      }
+    } catch (e) {
+      print("Search error: $e");
+    } finally {
+      if (mounted) setState(() => searching = false);
     }
-    searching = false;
   }
 
   // ===============================================================
-  // GET WEB GPS
+  // GET GPS (all platforms)
   // ===============================================================
-  Future<LatLng?> _getWebLocation() async {
-    final completer = Completer<LatLng?>();
-
-    html.window.navigator.geolocation.getCurrentPosition().then((pos) {
-      final num lat = pos.coords?.latitude ?? 0.0;
-      final num lng = pos.coords?.longitude ?? 0.0;
-      completer.complete(LatLng(lat.toDouble(), lng.toDouble()));
-    }).catchError((e) {
-      completer.complete(null);
-    });
-
-    return completer.future;
-  }
-
-  // ===============================================================
-  // GET MOBILE GPS
-  // ===============================================================
-  Future<LatLng?> _getMobileLocation() async {
+  Future<LatLng?> _getCurrentLocation() async {
     LocationPermission permission = await Geolocator.requestPermission();
 
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Izin GPS ditolak")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Izin GPS ditolak")),
+        );
+      }
       return null;
     }
 
@@ -97,24 +80,23 @@ class _MapPickerPageState extends State<MapPickerPage> {
   // GO TO CURRENT LOCATION
   // ===============================================================
   Future<void> _goToMyLocation() async {
-    setState(() => loadingGPS = true);
+    if (mounted) setState(() => loadingGPS = true);
 
-    LatLng? gps = kIsWeb ? await _getWebLocation() : await _getMobileLocation();
+    LatLng? gps = await _getCurrentLocation();
 
-    if (gps != null) {
+    if (gps != null && mounted) {
       _mapController.move(gps, 16);
       setState(() => selectedPoint = gps);
     }
 
-    setState(() => loadingGPS = false);
+    if (mounted) setState(() => loadingGPS = false);
   }
 
   // ===============================================================
   // Convert to simple address
   // ===============================================================
   String _fakeAddress(LatLng point) {
-    return "Latitude: ${point.latitude.toStringAsFixed(5)}, "
-        "Longitude: ${point.longitude.toStringAsFixed(5)}";
+    return "${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}";
   }
 
   // ===============================================================
@@ -124,8 +106,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Pilih Lokasi"),
+        title: const Text("Pilih Lokasi", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),),
         backgroundColor: Colors.blueAccent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
 
       body: Stack(
@@ -134,7 +117,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: LatLng(1.1301, 104.0487),
+              initialCenter: const LatLng(0.4634, 101.3908), // Pekanbaru default
               initialZoom: 13,
               onTap: (tapPos, point) {
                 setState(() => selectedPoint = point);
@@ -142,7 +125,8 @@ class _MapPickerPageState extends State<MapPickerPage> {
             ),
             children: [
               TileLayer(
-                urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                urlTemplate: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+                subdomains: const ['a', 'b', 'c', 'd'],
               ),
               if (selectedPoint != null)
                 MarkerLayer(
@@ -173,9 +157,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                          color: Colors.black26,
+                          color: Colors.black26.withOpacity(0.1),
                           blurRadius: 4,
-                          offset: Offset(1, 2))
+                          offset: const Offset(1, 2))
                     ],
                   ),
                   child: TextField(
@@ -184,7 +168,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                     decoration: const InputDecoration(
                       hintText: "Cari lokasi...",
                       border: InputBorder.none,
-                      icon: Icon(Icons.search),
+                      icon: Icon(Icons.search, color: Colors.blueAccent),
                     ),
                   ),
                 ),
@@ -199,9 +183,9 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black26,
+                            color: Colors.black26.withOpacity(0.1),
                             blurRadius: 4,
-                            offset: Offset(1, 2))
+                            offset: const Offset(1, 2))
                       ],
                     ),
                     child: Column(
@@ -239,6 +223,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
             right: 20,
             bottom: 140,
             child: FloatingActionButton(
+              heroTag: "gps_fab",
               backgroundColor: Colors.white,
               child: loadingGPS
                   ? const CircularProgressIndicator(color: Colors.blueAccent)
@@ -256,14 +241,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
               onPressed: selectedPoint == null
                   ? null
                   : () {
-                      Navigator.pop(
-                        context,
-                        {
-                          "address": _fakeAddress(selectedPoint!),
-                          "latitude": selectedPoint!.latitude,
-                          "longitude": selectedPoint!.longitude,
-                        },
-                      );
+                      Navigator.pop(context, {
+                        "address": _fakeAddress(selectedPoint!),
+                        "latitude": selectedPoint!.latitude,
+                        "longitude": selectedPoint!.longitude,
+                      });
                     },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blueAccent,

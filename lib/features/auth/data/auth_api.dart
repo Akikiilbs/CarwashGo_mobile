@@ -4,6 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/auth_response.dart';
 import '../models/user.dart';
 import '../../../core/network/dio_client.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:typed_data';
 import 'dart:io' show File;
 
@@ -339,6 +340,18 @@ class AuthApi {
   Future<User?> me() async {
     final r = await fetchMe();
     return r.user;
+  }
+
+  /// Sync FCM token ke server
+  Future<void> syncFcmToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token != null) {
+        await _dio.post('/auth/fcm-token', data: {'fcm_token': token});
+      }
+    } catch (_) {
+      // Abaikan error FCM saat setup masih berjalan / tanpa internet
+    }
   }
 
   /// helper: bikin url public storage dari outlet_photo_path

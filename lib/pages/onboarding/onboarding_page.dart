@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/storage/app_prefs.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -50,7 +51,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       Align(
                         alignment: Alignment.topRight,
                         child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/role'),
+                          onTap: () async {
+                            await AppPrefs.setOnboardingDone();
+                            if (context.mounted) Navigator.pushNamed(context, '/role');
+                          },
                           child: const Text(
                             "Lewati",
                             style: TextStyle(
@@ -134,9 +138,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         width: double.infinity,
                         height: 55,
                         child: ElevatedButton(
-                          onPressed: () {
+                          onPressed: () async {
                             if (currentIndex == onboardingData.length - 1) {
-                              Navigator.pushNamed(context, '/role');
+                              await AppPrefs.setOnboardingDone();
+                              if (context.mounted) Navigator.pushNamed(context, '/role');
                             } else {
                               _pageController.nextPage(
                                 duration: const Duration(milliseconds: 350),

@@ -33,14 +33,24 @@ class _ReviewPopupState extends State<ReviewPopup> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // ✅ Judul
-            Text(
-              "Beri Ulasan",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
-              ),
+            // ✅ Judul & Tombol Tutup
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const SizedBox(width: 48), // Spacer for centering
+                const Text(
+                  "Beri Ulasan",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueAccent,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.grey),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
 
             const SizedBox(height: 6),

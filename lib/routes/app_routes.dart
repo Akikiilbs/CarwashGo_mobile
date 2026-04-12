@@ -32,6 +32,8 @@ import '../pages/mitra/mitra_rating_page.dart';
 import '../pages/mitra/mitra_services_page.dart';
 
 import '../pages/payment/qris_page.dart';
+import '../pages/menu/track_mitra_page.dart';
+import '../models/order_model.dart';
 
 class AppRoutes {
   static final routes = <String, WidgetBuilder>{
@@ -89,6 +91,10 @@ class AppRoutes {
         discount: args["discount"],
         total: args["total"],
       );
+    },
+    '/track-mitra': (context) {
+      final order = ModalRoute.of(context)!.settings.arguments as Order;
+      return TrackMitraPage(order: order);
     },
   };
 }

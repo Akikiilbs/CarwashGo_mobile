@@ -82,7 +82,9 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
               children: [
                 const OutletPhotosSection(),
                 const SizedBox(height: 14),
-                _MatrixTable(
+                const _PartnerInfoSection(),
+                const SizedBox(height: 14),
+                _VerticalServiceCards(
                   services: prov.metaServices,
                   vehicles: prov.vehicleTypes,
                 ),
@@ -95,119 +97,170 @@ class _MitraServicesPageState extends State<MitraServicesPage> {
   }
 }
 
-class _MatrixTable extends StatelessWidget {
-  final List<MetaService> services;
-  final List<VehicleTypeDto> vehicles;
+class _PartnerInfoSection extends StatefulWidget {
+  const _PartnerInfoSection();
 
-  const _MatrixTable({
-    required this.services,
-    required this.vehicles,
-  });
+  @override
+  State<_PartnerInfoSection> createState() => _PartnerInfoSectionState();
+}
+
+class _PartnerInfoSectionState extends State<_PartnerInfoSection> {
+  final _descCtrl = TextEditingController();
+  final Set<String> _selectedDays = {};
+  final Set<String> _selectedHours = {};
+  bool _initialized = false;
+
+  final List<String> _allDays = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+  final List<String> _allHours = [
+    "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
+    "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
+  ];
+
+  @override
+  void dispose() {
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  void _initFromProfile(Map<String, dynamic> profile) {
+    if (_initialized) return;
+    _descCtrl.text = profile['description']?.toString() ?? '';
+    
+    final daysStr = profile['operating_days']?.toString() ?? '';
+    if (daysStr.isNotEmpty) {
+      _selectedDays.addAll(daysStr.split(',').map((e) => e.trim()));
+    }
+
+    final hoursStr = profile['operating_hours']?.toString() ?? '';
+    if (hoursStr.isNotEmpty) {
+      _selectedHours.addAll(hoursStr.split(',').map((e) => e.trim()));
+    }
+    _initialized = true;
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (services.isEmpty || vehicles.isEmpty) {
-      return const Center(
-        child: Text('Data layanan belum tersedia.'),
-      );
-    }
+    final prov = context.watch<PartnerServicesProvider>();
+    final profile = prov.partnerProfile;
 
-    // Fokus 3 kategori kendaraan yang paling umum (small/medium/large) kalau ada.
-    final preferredCodes = ['small', 'medium', 'large'];
-    final sortedVehicles = [...vehicles];
-    sortedVehicles.sort((a, b) {
-      final ai = preferredCodes.indexOf(a.code.toLowerCase());
-      final bi = preferredCodes.indexOf(b.code.toLowerCase());
-      final av = ai == -1 ? 999 : ai;
-      final bv = bi == -1 ? 999 : bi;
-      return av.compareTo(bv);
-    });
-    final displayVehicles = sortedVehicles.take(3).toList();
+    if (profile == null) return const SizedBox.shrink();
+    _initFromProfile(profile);
 
-    // Tampilkan layanan aktif saja (backend sudah filter, tapi biar aman)
-    final displayServices = services.where((s) => s.isActive).toList();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Atur harga & status layanan per tipe kendaraan',
-            style: TextStyle(fontSize: 14, color: Colors.black54),
-          ),
+          const Text('Profil & Operasional', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowHeight: 46,
-              dataRowMinHeight: 64,
-              dataRowMaxHeight: 80,
-              columns: [
-                const DataColumn(
-                  label: Text('Layanan',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-                ...displayVehicles.map(
-                  (v) => DataColumn(
-                    label: Text(
-                      v.name,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-              rows: displayServices.map((s) {
-                return DataRow(
-                  cells: [
-                    DataCell(_ServiceLabel(service: s)),
-                    ...displayVehicles.map((v) {
-                      return DataCell(_ServiceCell(service: s, vehicle: v));
-                    }).toList(),
-                  ],
-                );
-              }).toList(),
+          _buildField('Deskripsi Outlet', _descCtrl, maxLines: 3, hint: 'Ceritakan tentang keunggulan outlet Anda...'),
+          const SizedBox(height: 16),
+          const Text('Hari Operasional', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _allDays.map((day) {
+              final isSelected = _selectedDays.contains(day);
+              return FilterChip(
+                label: Text(day, style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black87)),
+                selected: isSelected,
+                selectedColor: Colors.blueAccent,
+                checkmarkColor: Colors.white,
+                onSelected: (val) {
+                  setState(() {
+                    if (val) _selectedDays.add(day);
+                    else _selectedDays.remove(day);
+                  });
+                },
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 16),
+          const Text('Jam Operasional (Slot)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              childAspectRatio: 2.2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
             ),
+            itemCount: _allHours.length,
+            itemBuilder: (context, index) {
+              final hour = _allHours[index];
+              final isSelected = _selectedHours.contains(hour);
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isSelected) _selectedHours.remove(hour);
+                    else _selectedHours.add(hour);
+                  });
+                },
+                child: Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.blueAccent : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: isSelected ? Colors.blueAccent : Colors.grey.shade300),
+                  ),
+                  child: Text(hour, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black87)),
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Tips: tekan salah satu kotak harga untuk mengubah harga atau mengaktifkan/nonaktifkan layanan.',
-            style: TextStyle(fontSize: 12, color: Colors.black45),
-          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: prov.loading ? null : () async {
+                try {
+                  await prov.updatePartnerProfile(
+                    businessName: profile['business_name']?.toString() ?? '',
+                    address: profile['address']?.toString() ?? '',
+                    phone: profile['user']?['phone']?.toString() ?? '',
+                    description: _descCtrl.text.trim(),
+                    operatingHours: _selectedHours.toList().join(','),
+                    operatingDays: _selectedDays.toList().join(','),
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil diperbarui')));
+                  }
+                } catch (e) {
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+                }
+              },
+              icon: const Icon(Icons.save),
+              label: const Text('Simpan Perubahan Profil'),
+            ),
+          )
         ],
       ),
     );
   }
-}
 
-class _ServiceLabel extends StatelessWidget {
-  final MetaService service;
-  const _ServiceLabel({required this.service});
-
-  @override
-  Widget build(BuildContext context) {
-    final category = (service.categoryName ?? '').trim();
+  Widget _buildField(String label, TextEditingController ctrl, {int maxLines = 1, String? hint}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          service.name,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        if (category.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Text(
-              category,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.only(top: 2),
-          child: Text(
-            'Base: Rp${service.basePrice}',
-            style: const TextStyle(fontSize: 12, color: Colors.black45),
+        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: ctrl,
+          maxLines: maxLines,
+          style: const TextStyle(fontSize: 14),
+          decoration: InputDecoration(
+            hintText: hint,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
           ),
         ),
       ],
@@ -215,79 +268,129 @@ class _ServiceLabel extends StatelessWidget {
   }
 }
 
-class _ServiceCell extends StatelessWidget {
+class _VerticalServiceCards extends StatelessWidget {
+  final List<MetaService> services;
+  final List<VehicleTypeDto> vehicles;
+
+  const _VerticalServiceCards({required this.services, required this.vehicles});
+
+  @override
+  Widget build(BuildContext context) {
+    if (services.isEmpty || vehicles.isEmpty) return const SizedBox.shrink();
+
+    final preferredCodes = ['small', 'medium', 'large'];
+    final sortedVehicles = [...vehicles];
+    sortedVehicles.sort((a, b) {
+      final ai = preferredCodes.indexOf(a.code.toLowerCase());
+      final bi = preferredCodes.indexOf(b.code.toLowerCase());
+      return (ai == -1 ? 999 : ai).compareTo(bi == -1 ? 999 : bi);
+    });
+    final displayVehicles = sortedVehicles.take(3).toList();
+    final displayServices = services.where((s) => s.isActive).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 12),
+          child: Text('Daftar Layanan & Harga', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ),
+        ...displayServices.map((service) => _ServiceCard(service: service, vehicles: displayVehicles)),
+      ],
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final MetaService service;
+  final List<VehicleTypeDto> vehicles;
+
+  const _ServiceCard({required this.service, required this.vehicles});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                child: const Icon(Icons.local_car_wash, color: Colors.blueAccent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(service.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(service.categoryName ?? 'Kategori Umum', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+                  ],
+                ),
+              ),
+              Text('Base: Rp${service.basePrice}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(),
+          const SizedBox(height: 8),
+          ...vehicles.map((v) => _VehiclePriceTile(service: service, vehicle: v)),
+        ],
+      ),
+    );
+  }
+}
+
+class _VehiclePriceTile extends StatelessWidget {
   final MetaService service;
   final VehicleTypeDto vehicle;
-
-  const _ServiceCell({
-    required this.service,
-    required this.vehicle,
-  });
-
-  String _rupiah(int v) {
-    return 'Rp$v';
-  }
+  const _VehiclePriceTile({required this.service, required this.vehicle});
 
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<PartnerServicesProvider>();
-    final PartnerServiceDto? cell = prov.getCell(service.id, vehicle.id);
-
+    final cell = prov.getCell(service.id, vehicle.id);
     final isActive = cell?.isActive ?? false;
     final price = cell?.price;
 
-    final bg = isActive
-        ? Colors.greenAccent.withOpacity(0.18)
-        : Colors.black12.withOpacity(0.06);
-    final border = isActive
-        ? Colors.green.withOpacity(0.35)
-        : Colors.black12.withOpacity(0.15);
-
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => _openEdit(context, cell),
-      child: Container(
-        width: 150,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+      onTap: () => _openEditStatic(context, cell, service, vehicle),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
           children: [
-            Text(
-              price == null ? 'Belum diatur' : _rupiah(price),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isActive ? Colors.green.shade900 : Colors.black54,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(vehicle.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(isActive ? 'Aktif' : 'Nonaktif', style: TextStyle(fontSize: 12, color: isActive ? Colors.green : Colors.red)),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(
-                  isActive ? Icons.check_circle : Icons.remove_circle_outline,
-                  size: 16,
-                  color: isActive ? Colors.green : Colors.black45,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  isActive ? 'Aktif' : 'Nonaktif',
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                ),
-              ],
+            Text(
+              price == null ? 'Belum diatur' : 'Rp$price',
+              style: TextStyle(fontWeight: FontWeight.bold, color: isActive ? Colors.blue.shade900 : Colors.black45),
             ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right, size: 18, color: Colors.black26),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _openEdit(
-      BuildContext context, PartnerServiceDto? existing) async {
+  // Moved _openEdit logic out to a static-like helper to keep code clean
+  Future<void> _openEditStatic(BuildContext context, PartnerServiceDto? existing, MetaService service, VehicleTypeDto vehicle) async {
     final prov = context.read<PartnerServicesProvider>();
     final currentPrice = existing?.price ?? service.basePrice;
     final currentActive = existing?.isActive ?? true;
@@ -295,37 +398,25 @@ class _ServiceCell extends StatelessWidget {
     final priceCtrl = TextEditingController(text: currentPrice.toString());
     bool active = currentActive;
 
-    final result = await showModalBottomSheet<bool>(
+    await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) {
         return Padding(
-          padding: EdgeInsets.only(
-            left: 16,
-            right: 16,
-            top: 8,
-            bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
+          padding: EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom),
           child: StatefulBuilder(
             builder: (ctx, setState) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '${service.name} • ${vehicle.name}',
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
+                  Text('${service.name} • ${vehicle.name}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   TextField(
                     controller: priceCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
-                      labelText: 'Harga (Rp)',
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: const InputDecoration(labelText: 'Harga (Rp)', border: OutlineInputBorder()),
                   ),
                   const SizedBox(height: 12),
                   SwitchListTile.adaptive(
@@ -350,27 +441,10 @@ class _ServiceCell extends StatelessWidget {
                           onPressed: () async {
                             final price = int.tryParse(priceCtrl.text.trim());
                             if (price == null || price < 0) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Harga tidak valid')),
-                              );
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harga tidak valid')));
                               return;
                             }
-
-                            // kalau sudah ada: lebih aman pakai upsert aja (backend updateOrCreate)
-                            await prov.upsert(
-                              serviceId: service.id,
-                              vehicleTypeId: vehicle.id,
-                              price: price,
-                              isActive: active,
-                            );
-
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Layanan disimpan')),
-                              );
-                            }
+                            await prov.upsert(serviceId: service.id, vehicleTypeId: vehicle.id, price: price, isActive: active);
                             if (ctx.mounted) Navigator.pop(ctx, true);
                           },
                           icon: const Icon(Icons.save),
@@ -379,53 +453,6 @@ class _ServiceCell extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (existing != null) ...[
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Hapus layanan?'),
-                              content: const Text(
-                                  'Data layanan untuk kombinasi ini akan dihapus.'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(context, false),
-                                  child: const Text('Batal'),
-                                ),
-                                ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.redAccent),
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: const Text('Hapus'),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (ok != true) return;
-
-                          await prov.remove(existing);
-
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Layanan dihapus')),
-                            );
-                          }
-                          if (ctx.mounted) Navigator.pop(ctx, true);
-                        },
-                        icon: const Icon(Icons.delete_outline,
-                            color: Colors.redAccent),
-                        label: const Text(
-                          'Hapus kombinasi ini',
-                          style: TextStyle(color: Colors.redAccent),
-                        ),
-                      ),
-                    ),
-                  ]
                 ],
               );
             },
@@ -433,10 +460,6 @@ class _ServiceCell extends StatelessWidget {
         );
       },
     );
-
-    if (result == true) {
-      // no-op: provider sudah update
-    }
   }
 }
 
@@ -470,7 +493,7 @@ class _OutletPhotoItem {
         (json['path'] ?? json['image_path'] ?? json['photo'])?.toString();
     return _OutletPhotoItem(
       id: id,
-      pathOrUrl: (url != null && url.isNotEmpty) ? url : (path ?? ''),
+      pathOrUrl: (path != null && path.isNotEmpty) ? path : (url ?? ''),
       isPrimary: isPrimary,
     );
   }
@@ -503,23 +526,17 @@ class _OutletPhotosSectionState extends State<OutletPhotosSection> {
     var s = item.pathOrUrl.trim();
     if (s.isEmpty) return '';
 
-    // Kalau sudah full URL, pakai langsung
-    if (s.startsWith('http://') || s.startsWith('https://')) return s;
+    // Jika sudah full URL (dimulai http), langsung pakai
+    if (s.toLowerCase().startsWith('http')) return s;
 
     // Bersihkan leading slash
     if (s.startsWith('/')) s = s.substring(1);
 
-    // Kalau sudah diawali "storage/", jangan tambahin "storage/" lagi
+    // Pastikan tidak double /storage/
     if (s.startsWith('storage/')) {
-      return '${_originFromApiBase()}/$s';
+        return '${_originFromApiBase()}/$s';
     }
 
-    // Kalau sudah mengandung "/storage/" di tengah, anggap sudah siap
-    if (s.contains('/storage/')) {
-      return '${_originFromApiBase()}$s';
-    }
-
-    // Default: path relatif di disk public
     return '${_originFromApiBase()}/storage/$s';
   }
 
@@ -743,6 +760,7 @@ class _OutletPhotosSectionState extends State<OutletPhotosSection> {
                     children: [
                       Image.network(
                         url,
+                        headers: const {'ngrok-skip-browser-warning': '69420'},
                         fit: BoxFit.cover,
                         errorBuilder: (_, err, __) {
                           debugPrint(

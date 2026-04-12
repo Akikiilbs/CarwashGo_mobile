@@ -1,25 +1,52 @@
 import 'package:flutter/material.dart';
 import '../models/mitra_station.dart';
+import '../core/network/dio_client.dart';
 import 'mitra_provider.dart';
 
 class StationProvider extends ChangeNotifier {
-  final List<MitraStation> _stations = [
-    MitraStation(
-      id: "1",
-      name: "Pak De Station",
-      location: "Tampan, Pekanbaru",
-      description: "Cuci cepat dan bersih",
-      jamOperasional: "08.00 - 17.00",
-      hariOperasional: "Senin - Sabtu",
-      harga: "Rp 50.000",
-      rating: 5.0,
-      image: "assets/images/mobil1.png",
-    ),
-  ];
+  final List<MitraStation> _stations = [];
+  bool _isLoading = false;
+  String? _error;
 
   List<MitraStation> get stations => List.unmodifiable(_stations);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
-  // ✅ SINKRON DATA DARI MITRA KE USER
+  final DioClient _dioClient = DioClient();
+
+  // ✅ FETCH DATA DARI BACKEND DATABASE
+  Future<void> fetchStations({double? lat, double? lng}) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await _dioClient.dio.get(
+        '/marketplace/partners',
+        queryParameters: {
+          if (lat != null) 'lat': lat,
+          if (lng != null) 'lng': lng,
+          'radius_km': 15, // Default sesuai permintaan user
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final List data = response.data['data'] ?? [];
+        _stations.clear();
+        _stations.addAll(data.map((item) => MitraStation.fromJson(item)).toList());
+      } else {
+        _error = "Gagal memuat data stasiun: ${response.statusCode}";
+      }
+    } catch (e) {
+      _error = "Terjadi kesalahan: $e";
+      print("❌ StationProvider Error: $e");
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // SINKRON DATA DARI MITRA KE USER (LOCAL)
   void upsertFromMitra(MitraProvider mitra) {
     final index = _stations.indexWhere((s) => s.id == "mitra");
 

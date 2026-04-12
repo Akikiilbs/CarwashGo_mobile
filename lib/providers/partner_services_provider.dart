@@ -14,6 +14,7 @@ class PartnerServicesProvider with ChangeNotifier {
   List<MetaService> metaServices = [];
   List<VehicleTypeDto> vehicleTypes = [];
   List<PartnerServiceDto> partnerServices = [];
+  Map<String, dynamic>? partnerProfile;
 
   /// key: "$serviceId:$vehicleTypeId"
   final Map<String, PartnerServiceDto> _index = {};
@@ -37,11 +38,13 @@ class PartnerServicesProvider with ChangeNotifier {
         _api.getMetaServices(),
         _api.getVehicleTypes(),
         _api.listPartnerServices(),
+        _api.getPartnerProfile(),
       ]);
 
       metaServices = (results[0] as List<MetaService>);
       vehicleTypes = (results[1] as List<VehicleTypeDto>);
       partnerServices = (results[2] as List<PartnerServiceDto>);
+      partnerProfile = (results[3] as Map<String, dynamic>);
 
       _log(
           'metaServices=${metaServices.length}, vehicleTypes=${vehicleTypes.length}, partnerServices=${partnerServices.length}');
@@ -156,6 +159,39 @@ class PartnerServicesProvider with ChangeNotifier {
       _log('remove ERROR: $e');
       _log('stack: $s');
       rethrow;
+    }
+  }
+
+  Future<void> updatePartnerProfile({
+    required String businessName,
+    required String address,
+    required String phone,
+    String? description,
+    String? operatingHours,
+    String? operatingDays,
+  }) async {
+    _log('updatePartnerProfile()');
+    try {
+      loading = true;
+      notifyListeners();
+
+      final updated = await _api.updatePartnerProfile({
+        'business_name': businessName,
+        'address': address,
+        'phone': phone,
+        'description': description,
+        'operating_hours': operatingHours,
+        'operating_days': operatingDays,
+      });
+
+      partnerProfile = updated;
+      notifyListeners();
+    } catch (e) {
+      error = e.toString();
+      rethrow;
+    } finally {
+      loading = false;
+      notifyListeners();
     }
   }
 

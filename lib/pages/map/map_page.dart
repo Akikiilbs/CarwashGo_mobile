@@ -16,6 +16,7 @@ class _MapPageState extends State<MapPage> {
 
   final List<Map<String, dynamic>> stations = [
     {
+      "id": "1",
       "name": "Pak De Station",
       "image": "assets/images/mobil1.png",
       "rating": 5.0,
@@ -24,6 +25,7 @@ class _MapPageState extends State<MapPage> {
       "city": "Tampan, Pekanbaru"
     },
     {
+      "id": "2",
       "name": "R CarWash Station",
       "image": "assets/images/on1.png",
       "rating": 5.0,
@@ -119,6 +121,7 @@ class _MapPageState extends State<MapPage> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => DetailStationPage(
+                            id: station["id"].toString(),
                             image: station["image"],
                             name: station["name"],
                             location: station["city"],

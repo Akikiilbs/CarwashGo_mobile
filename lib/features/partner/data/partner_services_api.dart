@@ -68,4 +68,14 @@ class PartnerServicesApi {
   Future<void> deletePartnerService(int id) async {
     await _dio.delete('/partner/services/$id');
   }
+
+  Future<Map<String, dynamic>> getPartnerProfile() async {
+    final res = await _dio.get('/partner/profile');
+    return res.data['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updatePartnerProfile(Map<String, dynamic> data) async {
+    final res = await _dio.put('/partner/profile', data: data);
+    return res.data['data'] as Map<String, dynamic>;
+  }
 }

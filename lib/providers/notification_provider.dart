@@ -3,12 +3,48 @@ import 'package:flutter/foundation.dart';
 
 import '../models/notification_model.dart';
 import '../features/order/data/order_api.dart';
+import '../features/auth/data/auth_api.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final List<AppNotification> _notifications = [];
   List<AppNotification> get notifications => _notifications;
 
   int get unreadCount => _notifications.where((n) => n.isNew).length;
+
+  // =========================
+  // SETUP FIREBASE MESSAGING
+  // =========================
+  Future<void> initFirebase() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      debugPrint('User granted FCM permission');
+
+      // Sync ke backend
+      AuthApi().syncFcmToken();
+
+      // Listener ketika aplikasi di FOREGROUND (sedang dibuka)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        debugPrint('Got a message whilst in the foreground!');
+        
+        if (message.notification != null) {
+          addNotification(AppNotification(
+            title: message.notification!.title ?? 'Notifikasi Baru',
+            message: message.notification!.body ?? '',
+            time: DateTime.now().toString(),
+            isNew: true,
+          ));
+        }
+      });
+    }
+  }
 
   // =========================
   // ✅ BADGE PESANAN PENDING

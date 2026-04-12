@@ -1,18 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../booking/booking_page.dart';
+import '../../providers/order_provider.dart';
+import '../../core/network/dio_client.dart';
+import '../navigation/bottom_nav.dart';
 
-/// Detail station/service untuk customer.
-/// Menampilkan informasi mitra (station) + daftar paket (service x vehicle type) dari backend marketplace.
-/// Kalau ada data yang belum tersedia dari backend, ditampilkan sebagai dummy.
 class DetailServicePage extends StatefulWidget {
-  final Map<String, dynamic> partner;
-  final List<Map<String, dynamic>> offers;
+  final String username;
+  final String phoneNumber;
+  final String bookingId;
+  final String date;
+  final String time;
+  final String carType;
+  final int price;
+  final int servicePrice;
+  final int tax;
+  final int discount;
+  final String address;
+  final String detailAddress;
+  final String plateNumber;
+  final int total;
+  final String partnerId;
+  final int vehicleTypeId;
+  final int partnerServiceId;
+  final double? latitude;
+  final double? longitude;
+
+  final bool showDelete;
+  final bool fromOrderPage;
 
   const DetailServicePage({
     super.key,
-    required this.partner,
-    required this.offers,
+    required this.username,
+    required this.phoneNumber,
+    required this.bookingId,
+    required this.date,
+    required this.time,
+    required this.carType,
+    required this.vehicleTypeId,
+    required this.partnerServiceId,
+    required this.price,
+    required this.servicePrice,
+    required this.tax,
+    required this.discount,
+    required this.address,
+    this.latitude,
+    this.longitude,
+    required this.detailAddress,
+    required this.plateNumber,
+    required this.total,
+    required this.partnerId,
+    this.showDelete = true,
+    this.fromOrderPage = false,
   });
 
   @override
@@ -20,266 +59,221 @@ class DetailServicePage extends StatefulWidget {
 }
 
 class _DetailServicePageState extends State<DetailServicePage> {
-  int? _selectedIndex;
+  bool _isSubmitting = false;
+
+  Future<void> _handleConfirm() async {
+    setState(() => _isSubmitting = true);
+
+    try {
+      // 1. Prepare Date/Time
+      final now = DateTime.now();
+      final scheduledDate = "${now.year}-${(now.month).toString().padLeft(2, '0')}-${widget.date.split(' ')[1].padLeft(2, '0')}";
+      final scheduledTime = widget.time.split(' - ')[0].replaceAll('.', ':');
+
+      // 2. Create Order call
+      final orderProv = context.read<OrderProvider>();
+      final result = await orderProv.createOrder(
+        partnerId: int.parse(widget.partnerId),
+        vehicleTypeId: widget.vehicleTypeId,
+        vehicleBrand: widget.carType, // snapshot literal
+        vehicleModel: "", 
+        plateNumber: widget.plateNumber,
+        address: "${widget.address} (${widget.detailAddress})",
+        latitude: widget.latitude,
+        longitude: widget.longitude,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        items: [
+          {'partner_service_id': widget.partnerServiceId, 'quantity': 1}
+        ],
+      );
+
+      if (result.status == 'success' || result.status == 'ok') {
+        if (!mounted) return;
+        
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Berhasil!"),
+            content: const Text("Pesanan Anda telah dibuat. Silahkan tunggu mitra menerima pesanan Anda sebelum melakukan pembayaran."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BottomNav(currentIndex: 2)),
+                    (route) => false,
+                  );
+                },
+                child: const Text("OK"),
+              )
+            ],
+          ),
+        );
+      } else {
+        throw Exception(result.message);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal membuat pesanan: ${e.toString().replaceAll('Exception: ', '')}")),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final partner = widget.partner;
-    final name = partner['business_name']?.toString() ??
-        partner['name']?.toString() ??
-        '-';
-    final address = partner['address']?.toString() ?? '-';
-
-    // Dummy (karena backend belum tentu menyediakan)
-    final rating = partner['rating']?.toString() ?? '4.7 (dummy)';
-    final openHours =
-        partner['open_hours']?.toString() ?? '08:00 - 18:00 (dummy)';
-    final description = partner['description']?.toString() ??
-        'Layanan cuci mobil di lokasi Anda. Pilih paket, lalu isi data booking. (dummy)';
-
-    final offers = List<Map<String, dynamic>>.from(widget.offers);
-    // sort by price asc
-    offers.sort((a, b) {
-      final pa = (a['price'] is num)
-          ? (a['price'] as num).toDouble()
-          : double.tryParse(a['price']?.toString() ?? '') ?? 0;
-      final pb = (b['price'] is num)
-          ? (b['price'] as num).toDouble()
-          : double.tryParse(b['price']?.toString() ?? '') ?? 0;
-      return pa.compareTo(pb);
-    });
-
-    final selectedOffer = (_selectedIndex != null &&
-            _selectedIndex! >= 0 &&
-            _selectedIndex! < offers.length)
-        ? offers[_selectedIndex!]
-        : null;
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFE5F1FF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFE5F1FF),
         elevation: 0,
+        centerTitle: true,
         title: const Text(
-          'Detail Service',
-          style:
-              TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+          "Detail Layanan",
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent),
         ),
-        iconTheme: const IconThemeData(color: Colors.black87),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header Station
-            Container(
-              padding: const EdgeInsets.all(14),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFFE5F1FF),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))
+                ],
               ),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      'assets/images/on1.png',
-                      width: 74,
-                      height: 74,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 16, color: Colors.blueAccent),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                address,
-                                style: const TextStyle(fontSize: 13),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                  _infoRow("Nama", widget.username),
+                  _infoRow("No. HP", widget.phoneNumber),
+                  _infoRow("ID Booking", widget.bookingId),
+                  _infoRow("Tanggal", widget.date),
+                  _infoRow("Jam", widget.time),
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  _infoRow("Jenis Mobil", widget.carType),
+                  _infoRow("Plat Nomor", widget.plateNumber),
+                  const SizedBox(height: 12),
+                  const Divider(),
+                  _addressCard(widget.address, widget.detailAddress),
+                  const Divider(),
+                  _infoRow("Harga Mobil", "Rp ${widget.price}"),
+                  _infoRow("Layanan Tambahan", "Rp ${widget.servicePrice}"),
+                  _infoRow("Pajak", "Rp ${widget.tax}"),
+                  _infoRow("Diskon", "${widget.discount}%"),
+                  const Divider(),
+                  _infoRow("Total Pembayaran", "Rp ${widget.total}", bold: true, big: true),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      if (widget.showDelete)
+                        Expanded(
+                          flex: 1,
+                          child: SizedBox(
+                            height: 50,
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.red, width: 1.4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
+                              child: const Text("BATAL", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                             ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _chip('⭐ $rating'),
-                            _chip('🕒 $openHours'),
-                          ],
+                      if (widget.showDelete) const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _isSubmitting ? null : _handleConfirm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blueAccent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text(
+                              "KONFIRMASI",
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                            ),
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   )
                 ],
               ),
             ),
-
-            const SizedBox(height: 14),
-            Text(
-              description,
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
-            ),
-
-            const SizedBox(height: 18),
-            const Text(
-              'Pilih Paket',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-
-            if (offers.isEmpty)
-              _emptyOffers()
-            else
-              Column(
-                children: List.generate(offers.length, (i) {
-                  final it = offers[i];
-                  final service =
-                      (it['service'] as Map?)?.cast<String, dynamic>() ?? {};
-                  final vt =
-                      (it['vehicle_type'] as Map?)?.cast<String, dynamic>() ??
-                          {};
-                  final serviceName =
-                      service['name']?.toString() ?? 'Layanan (dummy)';
-                  final vehicleTypeName =
-                      vt['name']?.toString() ?? 'Tipe (dummy)';
-                  final price = it['price']?.toString() ?? '-';
-
-                  final selected = _selectedIndex == i;
-
-                  return InkWell(
-                    onTap: () => setState(() => _selectedIndex = i),
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.blue.withOpacity(0.08)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: selected ? Colors.blueAccent : Colors.black12,
-                          width: selected ? 1.2 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Radio<int>(
-                            value: i,
-                            groupValue: _selectedIndex,
-                            onChanged: (v) =>
-                                setState(() => _selectedIndex = v),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  serviceName,
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Tipe: $vehicleTypeName',
-                                  style: const TextStyle(
-                                      fontSize: 13, color: Colors.black54),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Rp $price',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              ),
-
-            const SizedBox(height: 18),
-
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                onPressed: selectedOffer == null
-                    ? null
-                    : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                BookingPage(serviceItem: selectedOffer),
-                          ),
-                        );
-                      },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                child: const Text(
-                  'Book Now',
-                  style: TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+          if (_isSubmitting)
+            Container(color: Colors.black26, child: const Center(child: CircularProgressIndicator())),
+        ],
       ),
     );
   }
 
-  Widget _chip(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black12),
+  Widget _infoRow(String title, dynamic value, {bool bold = false, bool big = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+          Text(
+            "$value",
+            style: TextStyle(fontSize: big ? 18 : 15, fontWeight: bold ? FontWeight.bold : FontWeight.normal, color: Colors.black87),
+          ),
+        ],
       ),
-      child: Text(text,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 
-  Widget _emptyOffers() {
+  Widget _addressCard(String mainAddress, String detail) {
+    // Jika mainAddress adalah koordinat, kita tampilkan lebih cantik
+    final bool isCoord = mainAddress.contains(",");
+    
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black12),
+      margin: const EdgeInsets.only(top: 10, bottom: 10),
+      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
+      child: Row(
+        children: [
+          const Icon(Icons.location_on, color: Colors.blueAccent, size: 26),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Alamat Lengkap", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                const SizedBox(height: 5),
+                Text(
+                  isCoord ? "Lokasi Maps: $mainAddress" : mainAddress,
+                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                if (detail.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(detail, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
-      child: const Text('Belum ada paket layanan. (dummy)',
-          style: TextStyle(color: Colors.black54)),
     );
   }
 }

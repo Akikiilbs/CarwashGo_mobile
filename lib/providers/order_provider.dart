@@ -126,6 +126,49 @@ class OrderProvider extends ChangeNotifier {
     return res;
   }
 
+  // ✅ CUSTOMER: CREATE ORDER (V2)
+  Future<SimpleApiResponse> createOrder({
+    required int partnerId,
+    required int vehicleTypeId,
+    String? vehicleBrand,
+    String? vehicleModel,
+    String? plateNumber,
+    String? vehicleColor,
+    required String address,
+    double? latitude,
+    double? longitude,
+    required String scheduledDate, // 'YYYY-MM-DD'
+    required String scheduledTime, // 'HH:mm'
+    String? notes,
+    double discount = 0,
+    String? paymentMethod,
+    required List<Map<String, dynamic>> items,
+  }) async {
+    _setLoading(true);
+    try {
+      final res = await _orderApi.createOrderV2(
+        partnerId: partnerId,
+        vehicleTypeId: vehicleTypeId,
+        vehicleBrand: vehicleBrand,
+        vehicleModel: vehicleModel,
+        plateNumber: plateNumber,
+        vehicleColor: vehicleColor,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
+        notes: notes,
+        discount: discount,
+        paymentMethod: paymentMethod,
+        items: items,
+      );
+      return res;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // ============================================================
   // ✅ Mapper: API -> UI Order
   // ============================================================
@@ -198,6 +241,7 @@ class OrderProvider extends ChangeNotifier {
       discount: 0,
       paymentStatus: (o['payment_status'] ?? 'unpaid').toString(),
       total: totalAmount,
+      notes: (o['notes'] ?? '').toString(),
     );
   }
 
@@ -252,16 +296,28 @@ class OrderProvider extends ChangeNotifier {
       username: title,
       phoneNumber: (customer?['phone'] ?? '').toString(),
       bookingId: (o['id'] ?? '').toString(),
-      carType: (o['vehicle_model'] ?? '').toString().isNotEmpty
-          ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'
-              .trim()
-          : 'Vehicle',
+      carType: (() {
+        // Coba ekstrak dari items jika ada (format "Tipe Mobil - Tambahan Layanan")
+        final itemsList = o['items'];
+        if (itemsList is List && itemsList.isNotEmpty) {
+          final first = itemsList[0];
+          final String vt = first['vehicle_type']?.toString() ?? '';
+          final String sn = first['service_name']?.toString() ?? '';
+          if (vt.isNotEmpty && sn.isNotEmpty) {
+            return '$vt ($sn)';
+          }
+        }
+        return (o['vehicle_model'] ?? '').toString().isNotEmpty
+            ? '${(o['vehicle_brand'] ?? '').toString()} ${(o['vehicle_model'] ?? '').toString()}'.trim()
+            : 'Vehicle';
+      })(),
       price: 0,
       servicePrice: totalAmount,
       tax: 0,
       discount: 0,
       paymentStatus: (o['payment_status'] ?? 'unpaid').toString(),
       total: totalAmount,
+      notes: (o['notes'] ?? '').toString(),
     );
   }
 }

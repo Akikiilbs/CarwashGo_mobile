@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/order_provider.dart';
 import '../navigation/bottom_nav_mitra.dart';
 
 class MitraCarsPage extends StatelessWidget {
@@ -25,15 +27,28 @@ class MitraCarsPage extends StatelessWidget {
         ),
       ),
 
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: const [
-          _carItem("Toyota Avanza", "09:00 - 10:00"),
-          _carItem("Honda Brio", "10:00 - 11:00"),
-          _carItem("Daihatsu Xenia", "11:00 - 12:00"),
-          _carItem("Fortuner VRZ", "13:00 - 14:00"),
-          _carItem("Honda Jazz", "14:00 - 15:00"),
-        ],
+      body: Consumer<OrderProvider>(
+        builder: (context, orderProv, _) {
+          final completedOrders = orderProv.orders
+              .where((o) => o.status == 'completed')
+              .toList();
+
+          if (completedOrders.isEmpty) {
+            return const Center(child: Text("Belum ada mobil yang selesai dicuci.", style: TextStyle(color: Colors.black54)));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: completedOrders.length,
+            itemBuilder: (context, index) {
+              final o = completedOrders[index];
+              return _carItem(
+                o.carType.isNotEmpty && o.carType != 'Vehicle' ? o.carType : 'Mobil Customer',
+                "${o.date} ${o.time}",
+              );
+            },
+          );
+        },
       ),
 
       bottomNavigationBar: const BottomNavMitra(currentIndex: 0),

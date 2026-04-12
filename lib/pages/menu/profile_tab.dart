@@ -57,6 +57,7 @@ class _ProfileTabState extends State<ProfileTab> {
       return ClipOval(
         child: Image.network(
           url,
+          headers: const {'ngrok-skip-browser-warning': '69420'},
           key: ValueKey(url), // ✅ biar refresh kalau url berubah
           width: 104,
           height: 104,
@@ -78,7 +79,7 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   Future<void> _pickAndUploadImage() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       allowMultiple: false,
       withData: kIsWeb,

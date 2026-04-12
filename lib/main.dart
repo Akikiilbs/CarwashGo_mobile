@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 // ================= PROVIDERS =================
 import 'providers/notification_provider.dart';
@@ -11,14 +13,28 @@ import 'providers/station_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/partner_services_provider.dart';
 
+// ================= SERVICES =================
+import 'services/deep_link_service.dart';
+
 // ================= ROUTES =================
 import 'routes/app_routes.dart';
 
 // ================= THEME =================
 import 'core/theme/app_theme.dart';
 
-void main() {
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Inisialisasi DeepLink untuk pembayaran
+  DeepLinkService.instance.init();
 
   runApp(
     MultiProvider(
@@ -49,8 +65,8 @@ class MyApp extends StatelessWidget {
 
       theme: _loadThemeSafely(),
 
-      // mulai dari splash
-      initialRoute: '/splash',
+      // mulai dari AppGatePage
+      initialRoute: '/',
 
       routes: AppRoutes.routes,
     );

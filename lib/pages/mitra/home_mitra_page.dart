@@ -3,7 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../../providers/review_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../providers/order_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../models/order_model.dart';
 import '../navigation/bottom_nav_mitra.dart';
+import 'detail_service_mitra_page.dart';
 
 class HomeMitraPage extends StatefulWidget {
   const HomeMitraPage({super.key});
@@ -19,6 +23,8 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
     Future.microtask(() {
       if (!mounted) return;
       context.read<WalletProvider>().loadAll();
+      context.read<OrderProvider>().loadPartnerOrders();
+      context.read<NotificationProvider>().initFirebase();
     });
   }
 
@@ -91,12 +97,17 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _infoCard(
-                      onTap: () => Navigator.pushNamed(context, "/mitra-cars"),
-                      icon: Icons.directions_car_filled,
-                      color: Colors.blueAccent,
-                      title: "15 Mobil",
-                      subtitle: "Jumlah Mobil Dicuci",
+                    child: Consumer<OrderProvider>(
+                      builder: (context, orderProv, _) {
+                        final completedCount = orderProv.orders.where((o) => o.status == 'completed').length;
+                        return _infoCard(
+                          onTap: () => Navigator.pushNamed(context, "/mitra-orders"),
+                          icon: Icons.directions_car_filled,
+                          color: Colors.blueAccent,
+                          title: "$completedCount Mobil",
+                          subtitle: "Jumlah Mobil Dicuci",
+                        );
+                      },
                     ),
                   ),
                 ],
@@ -183,23 +194,55 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
 
               const SizedBox(height: 12),
 
-              _bookingCard(
-                "Abelino Simatupang",
-                "Cuci Premium",
-                "Selesai",
-                Colors.green,
-              ),
-              _bookingCard(
-                "Tio Rimexxx",
-                "Cuci Ekspres",
-                "Dalam Proses",
-                Colors.orange,
-              ),
-              _bookingCard(
-                "Daeng Agung",
-                "Cuci Interior",
-                "Menunggu",
-                Colors.grey,
+              Consumer<OrderProvider>(
+                builder: (context, orderProv, _) {
+                  if (orderProv.isLoading && orderProv.orders.isEmpty) {
+                    return const Center(child: LinearProgressIndicator());
+                  }
+
+                  if (orderProv.orders.isEmpty) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text("Belum ada booking terbaru.", style: TextStyle(color: Colors.black54)),
+                      ),
+                    );
+                  }
+
+                  final recentOrders = orderProv.orders.take(3).toList();
+
+                  return Column(
+                    children: recentOrders.map((o) {
+                      Color c;
+                      switch (o.status) {
+                        case 'completed': c = Colors.green; break;
+                        case 'pending': c = Colors.grey; break;
+                        case 'rejected':
+                        case 'cancelled': c = Colors.red; break;
+                        default: c = Colors.orange;
+                      }
+
+                      String statusText = o.status == 'pending' ? 'Menunggu' :
+                                          o.status == 'completed' ? 'Selesai' :
+                                          o.status == 'cancelled' ? 'Batal' :
+                                          o.status == 'rejected' ? 'Ditolak' :
+                                          o.status == 'accepted' ? 'Diterima' : 'Sesuai Proses';
+
+                      return _bookingCard(
+                        o.title,
+                        o.carType,
+                        statusText,
+                        c,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => DetailServiceMitraPage(order: o)),
+                          ).then((_) => context.read<OrderProvider>().loadPartnerOrders());
+                        },
+                      );
+                    }).toList(),
+                  );
+                },
               ),
 
               const SizedBox(height: 80),
@@ -267,23 +310,26 @@ Widget _bookingCard(
   String name,
   String service,
   String status,
-  Color color,
-) {
-  return Container(
-    padding: const EdgeInsets.all(18),
-    margin: const EdgeInsets.only(bottom: 14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black12.withOpacity(0.08),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        )
-      ],
-    ),
-    child: Row(
+  Color color, {
+  VoidCallback? onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(
@@ -309,6 +355,7 @@ Widget _bookingCard(
           ),
         ),
       ],
+      ),
     ),
   );
 }

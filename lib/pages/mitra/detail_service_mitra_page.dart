@@ -122,10 +122,10 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8FF),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blueAccent,
         elevation: 0,
-        foregroundColor: Colors.black87,
-        title: const Text('Detail Pesanan'),
+        foregroundColor: Colors.white,
+        title: const Text('Detail Pesanan', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -223,21 +223,41 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // =========================
-          // HEADER
+          // HEADER : CUSTOMER INFO
           // =========================
-          Text(
-            o.title, // nama customer
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              const Icon(Icons.person, color: Colors.blueAccent, size: 28),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  o.title, // nama customer
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.phone, color: Colors.black54, size: 18),
+              const SizedBox(width: 8),
+              Text(o.phoneNumber.isEmpty ? 'Tidak ada telepon' : o.phoneNumber, style: const TextStyle(fontSize: 15, color: Colors.black87)),
+            ],
           ),
           const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 8),
 
           // =========================
           // SEMUA DATA ORDER
           // =========================
           _infoRow("Booking ID", o.bookingId),
           _infoRow("Jadwal", "${o.date} ${o.time}"),
-          _infoRow("Jenis Mobil", o.carType.isEmpty ? "-" : o.carType),
+          _infoRow("Layanan / Tipe Mobil", o.carType.isEmpty ? "-" : o.carType),
           _infoRow("Plat", o.plateNumber.isEmpty ? "-" : o.plateNumber),
+          if (o.notes.trim().isNotEmpty)
+             _infoRow("Catatan Khusus", o.notes),
           _infoRow("Status", _labelStatus(o.status)),
           _infoRow("Pembayaran", _labelPayment(o.paymentStatus)),
           const SizedBox(height: 10),

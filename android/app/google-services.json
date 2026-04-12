@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1073748933082",
+    "project_id": "carwashgo-app-trpl615",
+    "storage_bucket": "carwashgo-app-trpl615.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1073748933082:android:95bbb97997b93a9ce968e3",
+        "android_client_info": {
+          "package_name": "com.carwashgo.application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBcPXhh4LAXbRE-8rYkC0ya5MeZ8DNAgLM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

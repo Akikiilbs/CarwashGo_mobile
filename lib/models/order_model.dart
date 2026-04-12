@@ -27,6 +27,7 @@ class Order {
   final int tax;
   final int discount;
   final int total;
+  final String notes;
 
   Order({
     this.mitraId,
@@ -51,6 +52,7 @@ class Order {
     required this.tax,
     required this.discount,
     required this.total,
+    this.notes = '',
   });
 
   Order copyWith({
@@ -76,6 +78,7 @@ class Order {
     int? tax,
     int? discount,
     int? total,
+    String? notes,
   }) {
     return Order(
       mitraId: mitraId ?? this.mitraId,
@@ -100,6 +103,7 @@ class Order {
       tax: tax ?? this.tax,
       discount: discount ?? this.discount,
       total: total ?? this.total,
+      notes: notes ?? this.notes,
     );
   }
 }

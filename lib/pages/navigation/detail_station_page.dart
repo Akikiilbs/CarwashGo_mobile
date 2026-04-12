@@ -2,23 +2,26 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/network/dio_client.dart';
 import '../booking/booking_page.dart';
 
 class DetailStationPage extends StatefulWidget {
+  final String id;
   final String image;
   final String name;
-  final String location; // akan kita pakai sebagai alamat
+  final String location;
   final double rating;
 
   final String? description;
-  final String? operationalHours;   // jam operasional
-  final String? price;              // harga
-  final String? operationalDays;    // hari operasional
+  final String? operationalHours;
+  final String? price;
+  final String? operationalDays;
 
   final bool isEditable; // user = false, mitra = true
 
   const DetailStationPage({
     super.key,
+    required this.id,
     required this.image,
     required this.name,
     required this.location,
@@ -41,31 +44,60 @@ class _DetailStationPageState extends State<DetailStationPage> {
   late TextEditingController _hargaController;
   late TextEditingController _hariController;
 
+  bool _loading = true;
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImage;
-
-  static const String _defaultDescription =
-      "We work dedicatedly towards spreading awareness among car users "
-      "about their car hygiene habits, durability of exterior look, "
-      "and other cleaning tips. We ensure the best quality wash "
-      "service with professional equipment.";
 
   @override
   void initState() {
     super.initState();
     _alamatController = TextEditingController(text: widget.location);
-    _descController = TextEditingController(
-      text: widget.description ?? _defaultDescription,
-    );
-    _jamController = TextEditingController(
-      text: widget.operationalHours ?? "",
-    );
-    _hargaController = TextEditingController(
-      text: widget.price ?? "",
-    );
-    _hariController = TextEditingController(
-      text: widget.operationalDays ?? "",
-    );
+    _descController = TextEditingController(text: widget.description ?? "");
+    _jamController = TextEditingController(text: _formatHours(widget.operationalHours));
+    _hargaController = TextEditingController(text: widget.price ?? "");
+    _hariController = TextEditingController(text: _formatDays(widget.operationalDays));
+    _fetchLatestData();
+  }
+
+  Future<void> _fetchLatestData() async {
+    try {
+      final dio = DioClient().dio;
+      final res = await dio.get('/marketplace/partners', queryParameters: {'partner_id': widget.id});
+      if (res.statusCode == 200 && mounted) {
+        final List data = res.data['data'] ?? [];
+        if (data.isNotEmpty) {
+          final p = data[0];
+          setState(() {
+            _descController.text = p['description']?.toString() ?? _descController.text;
+            _jamController.text = _formatHours(p['jamOperasional']?.toString() ?? p['operating_hours']?.toString());
+            _hariController.text = _formatDays(p['hariOperasional']?.toString() ?? p['operating_days']?.toString());
+            // Update harga if min price is found
+            final harga = p['harga']?.toString();
+            if (harga != null) _hargaController.text = "Mulai dari Rp $harga";
+            _loading = false;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("❌ DetailStation Error: $e");
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _formatHours(String? raw) {
+    if (raw == null || raw.isEmpty) return "08.00 - 17.00";
+    final slots = raw.split(',').map((e) => e.trim()).toList();
+    if (slots.length < 2) return slots.first;
+    slots.sort();
+    return "${slots.first} - ${slots.last}";
+  }
+
+  String _formatDays(String? raw) {
+    if (raw == null || raw.isEmpty) return "Senin - Minggu";
+    final days = raw.split(',').map((e) => e.trim()).toList();
+    if (days.length == 7) return "Setiap Hari";
+    if (days.length < 2) return days.first;
+    return days.join(', ');
   }
 
   @override
@@ -86,12 +118,10 @@ class _DetailStationPageState extends State<DetailStationPage> {
       imageQuality: 80,
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       setState(() {
         _pickedImage = result;
       });
-
-      // TODO: simpan ke backend / storage kalau sudah ada API
     }
   }
 
@@ -139,8 +169,6 @@ class _DetailStationPageState extends State<DetailStationPage> {
           ),
         ),
       ),
-
-      // tombol di bawah layar
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         child: SizedBox(
@@ -151,12 +179,10 @@ class _DetailStationPageState extends State<DetailStationPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
-              shadowColor: Colors.blueAccent.withOpacity(0.3),
               elevation: 5,
             ),
             onPressed: () {
               if (widget.isEditable) {
-                // ✅ KEMBALIKAN SEMUA DATA KE PROFIL MITRA
                 Navigator.pop(context, {
                   "alamat": _alamatController.text.trim(),
                   "description": _descController.text.trim(),
@@ -167,34 +193,7 @@ class _DetailStationPageState extends State<DetailStationPage> {
               } else {
                 Navigator.push(
                   context,
-                  PageRouteBuilder(
-                    transitionDuration: const Duration(milliseconds: 650),
-                    pageBuilder: (_, __, ___) => const BookingPage(),
-                    transitionsBuilder: (_, animation, __, child) {
-                      final slide = Tween<Offset>(
-                        begin: const Offset(0, 1),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutCubic,
-                        ),
-                      );
-
-                      final fade = CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeIn,
-                      );
-
-                      return SlideTransition(
-                        position: slide,
-                        child: FadeTransition(
-                          opacity: fade,
-                          child: child,
-                        ),
-                      );
-                    },
-                  ),
+                  MaterialPageRoute(builder: (_) => BookingPage(partnerId: widget.id)),
                 );
               }
             },
@@ -204,7 +203,6 @@ class _DetailStationPageState extends State<DetailStationPage> {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
-                letterSpacing: 0.8,
               ),
             ),
           ),
@@ -225,34 +223,46 @@ class _DetailStationPageState extends State<DetailStationPage> {
                   width: double.infinity,
                   fit: BoxFit.cover,
                 )
-              : Image.asset(
-                  widget.image,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+              : widget.image.startsWith('http')
+                  ? Image.network(
+                      widget.image,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Container(
+                        height: 200,
+                        width: double.infinity,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.image, color: Colors.grey, size: 50),
+                      ),
+                    )
+                  : Image.asset(
+                      widget.image,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (c, e, s) => Container(
+                        height: 200,
+                        width: double.infinity,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.image, color: Colors.grey, size: 50),
+                      ),
+                    ),
         ),
-
-        // tombol back
         Positioned(
           top: 10,
           left: 10,
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black54,
+              color: Colors.black45,
               borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
-              icon: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: Colors.white,
-              ),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ),
-
-        // tombol kamera untuk mitra
         if (widget.isEditable)
           Positioned(
             bottom: 10,
@@ -264,19 +274,8 @@ class _DetailStationPageState extends State<DetailStationPage> {
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.9),
                   shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12.withOpacity(0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
-                child: const Icon(
-                  Icons.camera_alt_rounded,
-                  color: Colors.blueAccent,
-                  size: 22,
-                ),
+                child: const Icon(Icons.camera_alt_rounded, color: Colors.blueAccent, size: 22),
               ),
             ),
           ),
@@ -310,11 +309,7 @@ class _DetailStationPageState extends State<DetailStationPage> {
               const SizedBox(width: 4),
               Text(
                 widget.rating.toStringAsFixed(1),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                ),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
           ),
@@ -324,249 +319,56 @@ class _DetailStationPageState extends State<DetailStationPage> {
   }
 
   Widget _buildAlamatSection() {
+    return _infoSection("Alamat Usaha", _alamatController, widget.isEditable, Icons.location_on);
+  }
+
+  Widget _buildDescriptionSection() {
+    return _infoSection("Deskripsi", _descController, widget.isEditable, Icons.description, maxLines: 4);
+  }
+
+  Widget _buildJamSection() {
+    return _infoSection("Jam Operasional", _jamController, widget.isEditable, Icons.access_time);
+  }
+
+  Widget _buildHargaSection() {
+    return _infoSection("Harga", _hargaController, widget.isEditable, Icons.payments);
+  }
+
+  Widget _buildHariSection() {
+    return _infoSection("Hari Operasional", _hariController, widget.isEditable, Icons.calendar_today);
+  }
+
+  Widget _infoSection(String title, TextEditingController controller, bool editable, IconData icon, {int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Alamat Usaha",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.blueAccent,
-          ),
-        ),
+        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.blueAccent)),
         const SizedBox(height: 8),
-        if (widget.isEditable)
+        if (editable)
           TextField(
-            controller: _alamatController,
-            maxLines: 2,
+            controller: controller,
+            maxLines: maxLines,
             decoration: InputDecoration(
-              hintText: "Tulis alamat lengkap...",
               filled: true,
               fillColor: const Color(0xFFF7F9FC),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE0E6F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.blueAccent),
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE0E6F0))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.blueAccent)),
             ),
           )
         else
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.location_on, color: Colors.grey, size: 18),
-              const SizedBox(width: 4),
+              Icon(icon, color: Colors.grey, size: 18),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _alamatController.text.isEmpty
-                      ? "Belum diisi"
-                      : _alamatController.text,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.4,
-                    color: Colors.black87,
-                  ),
+                  controller.text,
+                  style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black87),
                 ),
               ),
             ],
-          ),
-      ],
-    );
-  }
-
-  Widget _buildDescriptionSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Description",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.blueAccent,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (widget.isEditable)
-          TextField(
-            controller: _descController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: "Tulis deskripsi usaha...",
-              filled: true,
-              fillColor: const Color(0xFFF7F9FC),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE0E6F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.blueAccent),
-              ),
-            ),
-          )
-        else
-          Text(
-            _descController.text,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.5,
-              color: Colors.black87,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildJamSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Jam Operasional",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.blueAccent,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (widget.isEditable)
-          TextField(
-            controller: _jamController,
-            decoration: InputDecoration(
-              hintText: "Contoh: 08.00 - 17.00",
-              filled: true,
-              fillColor: const Color(0xFFF7F9FC),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE0E6F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.blueAccent),
-              ),
-            ),
-          )
-        else
-          Text(
-            _jamController.text.isEmpty
-                ? "Belum diisi"
-                : _jamController.text,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: Colors.black87,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildHargaSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Harga",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.blueAccent,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (widget.isEditable)
-          TextField(
-            controller: _hargaController,
-            decoration: InputDecoration(
-              hintText: "Contoh: Mulai dari Rp 50.000",
-              filled: true,
-              fillColor: const Color(0xFFF7F9FC),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE0E6F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.blueAccent),
-              ),
-            ),
-          )
-        else
-          Text(
-            _hargaController.text.isEmpty
-                ? "Belum diisi"
-                : _hargaController.text,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: Colors.black87,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildHariSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Hari Operasional",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.blueAccent,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (widget.isEditable)
-          TextField(
-            controller: _hariController,
-            decoration: InputDecoration(
-              hintText: "Contoh: Senin - Minggu",
-              filled: true,
-              fillColor: const Color(0xFFF7F9FC),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFFE0E6F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.blueAccent),
-              ),
-            ),
-          )
-        else
-          Text(
-            _hariController.text.isEmpty
-                ? "Belum diisi"
-                : _hariController.text,
-            style: const TextStyle(
-              fontSize: 14,
-              height: 1.4,
-              color: Colors.black87,
-            ),
           ),
       ],
     );
