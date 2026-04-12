@@ -144,23 +144,23 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 25),
 
                 // ⭐ Title
-                const Center(
+                Center(
                   child: Text(
                     "Selamat Datang",
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1976D2),
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Center(
+                Center(
                   child: Text(
                     "Masuk untuk melanjutkan",
                     style: TextStyle(
                       fontSize: 15,
-                      color: Color(0xFF1976D2),
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                 ),
@@ -182,10 +182,10 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20),
 
                 // ⭐ Input Email
-                const Text(
+                Text(
                   "Alamat Email",
                   style: TextStyle(
-                    color: Color(0xFF1976D2),
+                    color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -194,25 +194,19 @@ class _LoginPageState extends State<LoginPage> {
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: "Masukkan alamat email anda",
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    filled: true,
-                    fillColor: Colors.blue.shade50.withOpacity(0.3),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                    prefixIcon: Icon(Icons.email_outlined),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
                 // ⭐ Input Password
-                const Text(
+                Text(
                   "Kata Sandi",
                   style: TextStyle(
-                    color: Color(0xFF1976D2),
+                    color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -224,12 +218,6 @@ class _LoginPageState extends State<LoginPage> {
                   decoration: InputDecoration(
                     hintText: "Masukan kata sandi anda",
                     prefixIcon: const Icon(Icons.lock_outline),
-                    filled: true,
-                    fillColor: Colors.blue.shade50.withOpacity(0.3),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isObscure

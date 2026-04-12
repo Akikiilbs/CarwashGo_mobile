@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ================= PROVIDERS =================
 import 'providers/notification_provider.dart';
@@ -22,10 +24,30 @@ import 'routes/app_routes.dart';
 // ================= THEME =================
 import 'core/theme/app_theme.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   debugPrint("Handling a background message: ${message.messageId}");
+  
+  if (message.notification != null) {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedStr = prefs.getString('saved_notifications');
+      List<dynamic> savedList = savedStr != null ? jsonDecode(savedStr) : [];
+      
+      savedList.insert(0, {
+        'title': message.notification!.title ?? 'Notifikasi Baru',
+        'message': message.notification!.body ?? '',
+        'time': DateTime.now().toString(),
+        'isNew': true,
+        'route': message.data['route'], // Opsional dari payload
+      });
+      
+      await prefs.setString('saved_notifications', jsonEncode(savedList));
+    } catch (_) { }
+  }
 }
 
 void main() async {
@@ -60,6 +82,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey, // <== ADDED here
       title: "CarWashGo",
       debugShowCheckedModeBanner: false,
 

@@ -24,7 +24,9 @@ class _BookingPageState extends State<BookingPage> {
   bool _loading = true;
 
   List<String> _availableDates = [];
+  List<DateTime> _availableDatesObj = [];
   List<String> _availableTimes = [];
+  bool _fetchingTimes = false;
   
   VehicleTypeDto? _selectedVType;
   PartnerServiceDto? _selectedPService;
@@ -93,12 +95,14 @@ class _BookingPageState extends State<BookingPage> {
 
       // Generate dynamic dates (next 7 days, filtered by activeDays)
       final List<String> filteredDates = [];
+      final List<DateTime> dateObjs = [];
       final daysShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
       for (int i = 0; i < 14; i++) {
         final d = DateTime.now().add(Duration(days: i));
         final dayNameIndo = _dayMap[d.weekday];
         if (activeDays.contains(dayNameIndo)) {
           filteredDates.add("${daysShort[d.weekday % 7]} ${d.day}");
+          dateObjs.add(d);
         }
         if (filteredDates.length >= 7) break;
       }
@@ -107,12 +111,44 @@ class _BookingPageState extends State<BookingPage> {
         _vTypes = vTypes;
         _allServices = pServices;
         _availableDates = filteredDates;
-        _availableTimes = activeHours;
+        _availableDatesObj = dateObjs;
         _loading = false;
       });
+
+      if (dateObjs.isNotEmpty) {
+        _fetchAvailableTimes(dateObjs.first);
+      }
     } catch (e) {
       debugPrint("❌ Error loading booking meta: $e");
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _fetchAvailableTimes(DateTime date) async {
+    setState(() => _fetchingTimes = true);
+    try {
+      final dio = DioClient().dio;
+      final dateStr = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      final res = await dio.get('/partners/${widget.partnerId}/available-slots', queryParameters: {'date': dateStr});
+      
+      final List times = res.data['data']?['available_times'] ?? [];
+      
+      if (mounted) {
+        setState(() {
+          _availableTimes = times.map((e) => e.toString()).toList();
+          selectedTimeIndex = -1;
+          _fetchingTimes = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("❌ Error fetch times: $e");
+      if (mounted) {
+        setState(() {
+          _availableTimes = [];
+          selectedTimeIndex = -1;
+          _fetchingTimes = false;
+        });
+      }
     }
   }
 
@@ -328,7 +364,10 @@ class _BookingPageState extends State<BookingPage> {
         itemBuilder: (context, index) {
           final isSelected = selectedDateIndex == index;
           return GestureDetector(
-            onTap: () => setState(() => selectedDateIndex = index),
+            onTap: () {
+              setState(() => selectedDateIndex = index);
+              _fetchAvailableTimes(_availableDatesObj[index]);
+            },
             child: Container(
               width: 80,
               margin: const EdgeInsets.only(right: 10),
@@ -350,6 +389,15 @@ class _BookingPageState extends State<BookingPage> {
   }
 
   Widget _buildTimePicker() {
+    if (_fetchingTimes) {
+      return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+    }
+    if (_availableTimes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(8.0),
+        child: Text("Maaf, tidak ada slot waktu tersedia pada tanggal ini.", style: TextStyle(color: Colors.redAccent)),
+      );
+    }
     return Wrap(
       spacing: 10,
       runSpacing: 10,
@@ -426,6 +474,7 @@ class _BookingPageState extends State<BookingPage> {
                 phoneNumber: user.phone.isEmpty ? "081234567890" : user.phone,
                 bookingId: DateTime.now().millisecondsSinceEpoch.toString().substring(7),
                 date: _availableDates[selectedDateIndex],
+                rawDate: "${_availableDatesObj[selectedDateIndex].year}-${_availableDatesObj[selectedDateIndex].month.toString().padLeft(2, '0')}-${_availableDatesObj[selectedDateIndex].day.toString().padLeft(2, '0')}",
                 time: _availableTimes[selectedTimeIndex],
                 carType: _selectedVType!.name,
                 vehicleTypeId: _selectedVType!.id,

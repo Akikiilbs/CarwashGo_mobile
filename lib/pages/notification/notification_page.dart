@@ -27,6 +27,22 @@ class NotificationPage extends StatelessWidget {
         ),
         centerTitle: true,
         leading: const BackButton(color: Colors.black),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.done_all, color: Colors.blue),
+            tooltip: 'Tandai semua dibaca',
+            onPressed: () {
+              notifProv.markAllAsRead();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+            tooltip: 'Hapus semua notifikasi',
+            onPressed: () {
+              notifProv.clearNotifications();
+            },
+          )
+        ],
       ),
 
       body: SingleChildScrollView(
@@ -44,7 +60,7 @@ class NotificationPage extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 10),
-            ...current.map(_notifCard),
+            ...current.map((n) => _notifCard(context, n)),
             const SizedBox(height: 20),
             if (prev.isNotEmpty)
               const Text(
@@ -56,7 +72,7 @@ class NotificationPage extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 10),
-            ...prev.map(_notifCard),
+            ...prev.map((n) => _notifCard(context, n)),
           ],
         ),
       ),
@@ -66,33 +82,41 @@ class NotificationPage extends StatelessWidget {
     );
   }
 
-  Widget _notifCard(AppNotification n) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white30,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(
-            n.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
+  Widget _notifCard(BuildContext context, AppNotification n) {
+    return GestureDetector(
+      onTap: () {
+        // Jika ada route, otomatis arahkan
+        if (n.route != null && n.route!.isNotEmpty) {
+          Navigator.pushNamed(context, n.route!);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 14),
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.white30,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(
+              n.title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
-          ),
-          Row(children: [
-            const Icon(Icons.access_time, color: Colors.white, size: 18),
-            const SizedBox(width: 6),
-            Text(n.time, style: const TextStyle(color: Colors.white)),
-          ])
+            Row(children: [
+              const Icon(Icons.access_time, color: Colors.white, size: 18),
+              const SizedBox(width: 6),
+              Text(n.time, style: const TextStyle(color: Colors.white)),
+            ])
+          ]),
+          const SizedBox(height: 10),
+          Text(n.message, style: const TextStyle(color: Colors.white)),
         ]),
-        const SizedBox(height: 10),
-        Text(n.message, style: const TextStyle(color: Colors.white)),
-      ]),
+      ),
     );
   }
 }

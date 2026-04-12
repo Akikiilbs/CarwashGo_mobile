@@ -3,12 +3,14 @@ class AppNotification {
   final String message;  // Pesan detail
   final String time;     // Waktu notifikasi
   bool isNew;            // Apakah notifikasi baru atau sudah dibaca
+  final String? route;   // Rute deep link (opsional, contoh: /menu atau /mitra-orders)
 
   AppNotification({
     required this.title,
     required this.message,
     required this.time,
     this.isNew = true,
+    this.route,
   });
 
   // 🔹 Konversi ke Map (berguna untuk penyimpanan lokal nanti)
@@ -18,6 +20,7 @@ class AppNotification {
       'message': message,
       'time': time,
       'isNew': isNew,
+      'route': route,
     };
   }
 
@@ -28,6 +31,7 @@ class AppNotification {
       message: map['message'] ?? '',
       time: map['time'] ?? '',
       isNew: map['isNew'] ?? true,
+      route: map['route'],
     );
   }
 }

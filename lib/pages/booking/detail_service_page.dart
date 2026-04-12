@@ -10,6 +10,7 @@ class DetailServicePage extends StatefulWidget {
   final String phoneNumber;
   final String bookingId;
   final String date;
+  final String rawDate;
   final String time;
   final String carType;
   final int price;
@@ -35,6 +36,7 @@ class DetailServicePage extends StatefulWidget {
     required this.phoneNumber,
     required this.bookingId,
     required this.date,
+    required this.rawDate,
     required this.time,
     required this.carType,
     required this.vehicleTypeId,
@@ -66,8 +68,7 @@ class _DetailServicePageState extends State<DetailServicePage> {
 
     try {
       // 1. Prepare Date/Time
-      final now = DateTime.now();
-      final scheduledDate = "${now.year}-${(now.month).toString().padLeft(2, '0')}-${widget.date.split(' ')[1].padLeft(2, '0')}";
+      final scheduledDate = widget.rawDate;
       final scheduledTime = widget.time.split(' - ')[0].replaceAll('.', ':');
 
       // 2. Create Order call
