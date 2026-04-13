@@ -13,16 +13,18 @@ class BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+      height: 72,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, -4),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: Offset(0, 6),
+            color: Color(0x14000000),
           ),
         ],
       ),
@@ -55,8 +57,8 @@ class BottomNav extends StatelessWidget {
           vertical: 7,
         ),
         decoration: BoxDecoration(
-          color: active ? Colors.blueAccent.withOpacity(0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
+          color: active ? const Color(0x1A1E88E5) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           children: [

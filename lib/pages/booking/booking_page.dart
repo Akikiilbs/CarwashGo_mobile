@@ -27,6 +27,7 @@ class _BookingPageState extends State<BookingPage> {
   List<DateTime> _availableDatesObj = [];
   List<String> _availableTimes = [];
   bool _fetchingTimes = false;
+  bool _errorFetchingTimes = false;
   
   VehicleTypeDto? _selectedVType;
   PartnerServiceDto? _selectedPService;
@@ -138,6 +139,7 @@ class _BookingPageState extends State<BookingPage> {
           _availableTimes = times.map((e) => e.toString()).toList();
           selectedTimeIndex = -1;
           _fetchingTimes = false;
+          _errorFetchingTimes = false;
         });
       }
     } catch (e) {
@@ -147,6 +149,7 @@ class _BookingPageState extends State<BookingPage> {
           _availableTimes = [];
           selectedTimeIndex = -1;
           _fetchingTimes = false;
+          _errorFetchingTimes = true;
         });
       }
     }
@@ -391,6 +394,20 @@ class _BookingPageState extends State<BookingPage> {
   Widget _buildTimePicker() {
     if (_fetchingTimes) {
       return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+    }
+    if (_errorFetchingTimes) {
+      return Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            const Text("Gagal memuat slot waktu.", style: TextStyle(color: Colors.redAccent)),
+            TextButton(
+              onPressed: () => _fetchAvailableTimes(_availableDatesObj[selectedDateIndex]),
+              child: const Text("Coba Lagi"),
+            )
+          ],
+        ),
+      );
     }
     if (_availableTimes.isEmpty) {
       return const Padding(

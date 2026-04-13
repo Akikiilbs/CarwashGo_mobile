@@ -11,6 +11,11 @@ import 'dart:io' show File;
 class AuthApi {
   final Dio _dio = DioClient().dio;
   final _storage = const FlutterSecureStorage();
+  
+  Future<bool> hasToken() async {
+    final token = await _storage.read(key: 'auth_token');
+    return token != null && token.isNotEmpty;
+  }
 
   /// POST /auth/login
   /// body: { email, password }
