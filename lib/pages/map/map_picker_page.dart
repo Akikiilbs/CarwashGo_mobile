@@ -15,6 +15,7 @@ class MapPickerPage extends StatefulWidget {
 
 class _MapPickerPageState extends State<MapPickerPage> {
   LatLng? selectedPoint;
+  String? selectedAddress; // ✅ Menyimpan alamat asli
   bool loadingGPS = false;
   final MapController _mapController = MapController();
 
@@ -86,15 +87,38 @@ class _MapPickerPageState extends State<MapPickerPage> {
 
     if (gps != null && mounted) {
       _mapController.move(gps, 16);
-      setState(() => selectedPoint = gps);
+      setState(() {
+        selectedPoint = gps;
+        selectedAddress = null; // reset while fetching
+      });
+      final addr = await _reverseGeocode(gps);
+      if (mounted && selectedPoint == gps) {
+        setState(() => selectedAddress = addr);
+      }
     }
 
     if (mounted) setState(() => loadingGPS = false);
   }
 
   // ===============================================================
-  // Convert to simple address
+  // Reverse Geocoding (Convert Coordinates to Address)
   // ===============================================================
+  Future<String?> _reverseGeocode(LatLng point) async {
+    try {
+      final uri = Uri.parse(
+          "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${point.latitude}&lon=${point.longitude}");
+      final res = await http.get(uri, headers: {"User-Agent": "carwashgo-app/1.0"});
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body);
+        if (body is Map && body["display_name"] is String) {
+          final display = (body["display_name"] as String).trim();
+          if (display.isNotEmpty) return display;
+        }
+      }
+    } catch (_) {}
+    return null; // return null if failed
+  }
+
   String _fakeAddress(LatLng point) {
     return "${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}";
   }
@@ -119,8 +143,15 @@ class _MapPickerPageState extends State<MapPickerPage> {
             options: MapOptions(
               initialCenter: const LatLng(0.4634, 101.3908), // Pekanbaru default
               initialZoom: 13,
-              onTap: (tapPos, point) {
-                setState(() => selectedPoint = point);
+              onTap: (tapPos, point) async {
+                setState(() {
+                  selectedPoint = point;
+                  selectedAddress = null; // reset while fetching
+                });
+                final addr = await _reverseGeocode(point);
+                if (mounted && selectedPoint == point) {
+                  setState(() => selectedAddress = addr);
+                }
               },
             ),
             children: [
@@ -206,6 +237,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                             _mapController.move(newPoint, 16);
                             setState(() {
                               selectedPoint = newPoint;
+                              selectedAddress = item["display_name"]; // get actual address from search
                               searchResults = [];
                               _searchController.clear();
                             });
@@ -240,9 +272,17 @@ class _MapPickerPageState extends State<MapPickerPage> {
             child: ElevatedButton(
               onPressed: selectedPoint == null
                   ? null
-                  : () {
+                  : () async {
+                      // Jika alamat kosong (atau gagal), lakukan reverse geocode sekarang atau pakai koordinat
+                      var addr = selectedAddress;
+                      if (addr == null) {
+                        addr = await _reverseGeocode(selectedPoint!);
+                        addr ??= _fakeAddress(selectedPoint!);
+                      }
+
+                      if (!mounted) return;
                       Navigator.pop(context, {
-                        "address": _fakeAddress(selectedPoint!),
+                        "address": addr,
                         "latitude": selectedPoint!.latitude,
                         "longitude": selectedPoint!.longitude,
                       });

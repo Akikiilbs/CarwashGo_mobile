@@ -13,7 +13,19 @@ class NotificationProvider extends ChangeNotifier {
   List<AppNotification> _notifications = [];
   List<AppNotification> get notifications => _notifications;
 
+  List<AppNotification> getCustomerNotifications() => 
+      _notifications.where((n) => n.role == 'customer').toList();
+
+  List<AppNotification> getMitraNotifications() => 
+      _notifications.where((n) => n.role == 'mitra').toList();
+
   int get unreadCount => _notifications.where((n) => n.isNew).length;
+  
+  int getCustomerUnreadCount() => 
+      _notifications.where((n) => n.role == 'customer' && n.isNew).length;
+
+  int getMitraUnreadCount() => 
+      _notifications.where((n) => n.role == 'mitra' && n.isNew).length;
 
   NotificationProvider() {
     _loadFromLocal();
@@ -65,12 +77,19 @@ class NotificationProvider extends ChangeNotifier {
         debugPrint('Got a message whilst in the foreground!');
         
         if (message.notification != null) {
+          String? route = message.data['route'];
+          String role = 'customer';
+          if (route != null && (route.startsWith('/mitra-') || route.contains('mitra'))) {
+            role = 'mitra';
+          }
+
           addNotification(AppNotification(
             title: message.notification!.title ?? 'Notifikasi Baru',
             message: message.notification!.body ?? '',
             time: DateTime.now().toString(),
             isNew: true,
-            route: message.data['route'], // rute khusus misal /menu atau /mitra-orders
+            route: route,
+            role: role,
           ));
         }
       });
@@ -167,16 +186,22 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void markAllAsRead() {
+  void markAllAsRead({String? role}) {
     for (final n in _notifications) {
-      n.isNew = false;
+      if (role == null || n.role == role) {
+        n.isNew = false;
+      }
     }
     _saveToLocal();
     notifyListeners();
   }
 
-  void clearNotifications() {
-    _notifications.clear();
+  void clearNotifications({String? role}) {
+    if (role == null) {
+      _notifications.clear();
+    } else {
+      _notifications.removeWhere((n) => n.role == role);
+    }
     _saveToLocal();
     notifyListeners();
   }

@@ -62,9 +62,33 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
                       ),
                     ],
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.notifications, size: 26),
-                    onPressed: () {},
+                  Consumer<NotificationProvider>(
+                    builder: (context, notifProv, _) {
+                      final hasUnread = notifProv.getMitraUnreadCount() > 0;
+                      return Stack(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.notifications, size: 26),
+                            onPressed: () {
+                              Navigator.pushNamed(context, "/mitra-notification");
+                            },
+                          ),
+                          if (hasUnread)
+                            Positioned(
+                              right: 12,
+                              top: 12,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: const BoxDecoration(
+                                  color: Colors.redAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

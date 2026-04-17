@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:carwashgo/features/auth/data/auth_api.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/user_provider.dart';
+import '../map/map_picker_page.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -171,163 +172,90 @@ class _ProfileTabState extends State<ProfileTab> {
   }
 
   // =======================
-  // Ambil alamat dari lokasi saat ini
+  // Edit alamat via MapPickerPage
   // =======================
-  Future<String?> _getAddressFromCurrentLocation() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (!mounted) return null;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('GPS belum aktif. Silakan aktifkan lokasi.')),
-        );
-        return null;
-      }
+  bool _updatingLocation = false;
 
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied ||
-          perm == LocationPermission.deniedForever) {
-        if (!mounted) return null;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin lokasi ditolak.')),
-        );
-        return null;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      // reverse geocode via Nominatim (OpenStreetMap)
-      try {
-        final dio = Dio(
-          BaseOptions(
-            headers: {'User-Agent': 'carwashgo-app/1.0'},
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 10),
-          ),
-        );
-
-        final res = await dio.get(
-          'https://nominatim.openstreetmap.org/reverse',
-          queryParameters: {
-            'format': 'jsonv2',
-            'lat': pos.latitude,
-            'lon': pos.longitude,
-          },
-        );
-
-        final body = res.data;
-        if (body is Map && body['display_name'] is String) {
-          final display = (body['display_name'] as String).trim();
-          if (display.isNotEmpty) return display;
-        }
-      } catch (_) {
-        // kalau reverse geocode gagal, fallback koordinat
-      }
-
-      return 'Latitude: ${pos.latitude.toStringAsFixed(5)}, Longitude: ${pos.longitude.toStringAsFixed(5)}';
-    } catch (e) {
-      if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal ambil lokasi: $e')),
-      );
-      return null;
-    }
-  }
-
-  // =======================
-  // Edit alamat + tombol "Gunakan lokasi saat ini"
-  // =======================
   Future<void> _editAddress() async {
+    final picked = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MapPickerPage()),
+    );
+
+    if (!mounted) return;
+    if (picked == null || picked is! Map) return;
+
+    final newLat = double.parse(picked["latitude"].toString());
+    final newLng = double.parse(picked["longitude"].toString());
+    final newAddress = (picked["address"] ?? "").toString();
+
     final user = context.read<UserProvider>();
-    final controller = TextEditingController(text: user.address);
 
-    final newAddress = await showDialog<String>(
+    final confirmed = await showDialog<bool>(
       context: context,
-      builder: (_) {
-        bool locating = false;
-
-        return StatefulBuilder(
-          builder: (ctx, setStateDialog) => AlertDialog(
-            title: const Text('Ubah Alamat Utama'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: controller,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    hintText: 'Masukkan alamat...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: locating
-                        ? null
-                        : () async {
-                            setStateDialog(() => locating = true);
-                            final addr = await _getAddressFromCurrentLocation();
-                            if (addr != null) controller.text = addr;
-                            setStateDialog(() => locating = false);
-                          },
-                    icon: locating
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.my_location),
-                    label: Text(locating
-                        ? 'Mengambil lokasi...'
-                        : 'Gunakan lokasi saat ini'),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-                child: const Text('Simpan'),
-              ),
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text("Konfirmasi Perubahan Lokasi"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Alamat baru: $newAddress"),
+              const SizedBox(height: 6),
+              Text("Koordinat: $newLat, $newLng"),
+              const SizedBox(height: 12),
+              const Text("Simpan perubahan lokasi utama?"),
             ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text("Batal"),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text("Simpan"),
+            ),
+          ],
         );
       },
     );
 
-    if (newAddress == null) return;
-    if (newAddress.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alamat tidak boleh kosong')),
-      );
-      return;
-    }
+    if (confirmed != true) return;
 
-    final res = await _authApi.updateProfile(address: newAddress);
-    if (!mounted) return;
+    setState(() => _updatingLocation = true);
 
-    if (res.status == 'success') {
-      context.read<UserProvider>().setAddress(newAddress);
-      await _loadMe();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Alamat berhasil diperbarui')),
+    try {
+      final res = await _authApi.updateProfile(
+        address: newAddress,
+        latitude: newLat,
+        longitude: newLng,
       );
-    } else {
+
+      if (res.status == 'success') {
+        context.read<UserProvider>().setAddress(
+              newAddress,
+              latitude: newLat,
+              longitude: newLng,
+            );
+        await _loadMe();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Alamat dan lokasi berhasil diperbarui')),
+        );
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message)),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(res.message)),
+        SnackBar(content: Text('Gagal memperbarui lokasi: $e')),
       );
+    } finally {
+      if (mounted) setState(() => _updatingLocation = false);
     }
   }
 
@@ -527,11 +455,53 @@ class _ProfileTabState extends State<ProfileTab> {
             const SizedBox(height: 26),
             _infoTile(icon: Icons.phone, title: "Nomor Telepon", value: phone),
             const SizedBox(height: 10),
-            _infoTileEditable(
-              icon: Icons.location_on,
-              title: "Alamat Utama",
-              value: address,
-              onEdit: _editAddress,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12.withOpacity(0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   Row(
+                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                     children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on, size: 24, color: Colors.blueAccent),
+                            const SizedBox(width: 12),
+                            const Text("Alamat Utama", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          ]
+                        ),
+                        TextButton(
+                           onPressed: _updatingLocation ? null : _editAddress,
+                           style: TextButton.styleFrom(
+                             padding: EdgeInsets.zero,
+                             minimumSize: const Size(50, 30),
+                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                           ),
+                           child: _updatingLocation
+                               ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                               : const Text("Ubah", style: TextStyle(fontWeight: FontWeight.bold)),
+                        )
+                     ],
+                   ),
+                   const SizedBox(height: 10),
+                   Text(address, style: const TextStyle(fontSize: 14, height: 1.4, color: Colors.black54)),
+                   if (user.latitude != null && user.longitude != null) ...[
+                     const SizedBox(height: 6),
+                     Text("Titik Koordinat: ${user.latitude}, ${user.longitude}", style: const TextStyle(fontSize: 12, color: Colors.black38)),
+                   ]
+                ],
+              ),
             ),
             const SizedBox(height: 10),
             _infoTile(

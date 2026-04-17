@@ -4,6 +4,7 @@ class AppNotification {
   final String time;     // Waktu notifikasi
   bool isNew;            // Apakah notifikasi baru atau sudah dibaca
   final String? route;   // Rute deep link (opsional, contoh: /menu atau /mitra-orders)
+  final String role;     // 'customer' atau 'mitra'
 
   AppNotification({
     required this.title,
@@ -11,6 +12,7 @@ class AppNotification {
     required this.time,
     this.isNew = true,
     this.route,
+    this.role = 'customer',
   });
 
   // 🔹 Konversi ke Map (berguna untuk penyimpanan lokal nanti)
@@ -21,6 +23,7 @@ class AppNotification {
       'time': time,
       'isNew': isNew,
       'route': route,
+      'role': role,
     };
   }
 
@@ -32,6 +35,7 @@ class AppNotification {
       time: map['time'] ?? '',
       isNew: map['isNew'] ?? true,
       route: map['route'],
+      role: map['role'] ?? 'customer',
     );
   }
 }

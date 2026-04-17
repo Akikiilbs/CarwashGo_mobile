@@ -37,12 +37,19 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
       final savedStr = prefs.getString('saved_notifications');
       List<dynamic> savedList = savedStr != null ? jsonDecode(savedStr) : [];
       
+      final route = message.data['route'];
+      String role = 'customer';
+      if (route != null && (route.toString().startsWith('/mitra-') || route.toString().contains('mitra'))) {
+        role = 'mitra';
+      }
+
       savedList.insert(0, {
         'title': message.notification!.title ?? 'Notifikasi Baru',
         'message': message.notification!.body ?? '',
         'time': DateTime.now().toString(),
         'isNew': true,
-        'route': message.data['route'], // Opsional dari payload
+        'route': route,
+        'role': role,
       });
       
       await prefs.setString('saved_notifications', jsonEncode(savedList));

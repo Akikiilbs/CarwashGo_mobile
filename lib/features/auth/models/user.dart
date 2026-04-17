@@ -5,14 +5,13 @@ class User {
   final String phone;
   final String role;
   final int isActive;
-
-  // ✅ tambahan
   final String address;
   final String profilePhotoPath;
   final String profilePhotoUrl;
-
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final double? latitude;
+  final double? longitude;
 
   User({
     required this.id,
@@ -26,6 +25,8 @@ class User {
     this.profilePhotoUrl = '',
     this.createdAt,
     this.updatedAt,
+    this.latitude,
+    this.longitude,
   });
 
   static int _asInt(dynamic v, {int fallback = 0}) {
@@ -57,14 +58,31 @@ class User {
       phone: (json['phone'] ?? '').toString(),
       role: (json['role'] ?? '').toString(),
       isActive: _asActive(json['is_active']),
-
-      // ✅ tambahan
       address: (json['address'] ?? '').toString(),
       profilePhotoPath: (json['profile_photo_path'] ?? '').toString(),
       profilePhotoUrl: (json['profile_photo_url'] ?? '').toString(),
-
+      latitude: json['latitude'] != null ? double.tryParse(json['latitude'].toString()) : null,
+      longitude: json['longitude'] != null ? double.tryParse(json['longitude'].toString()) : null,
       createdAt: _asDate(json['created_at']),
       updatedAt: _asDate(json['updated_at']),
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'role': role,
+      'is_active': isActive,
+      'address': address,
+      'profile_photo_path': profilePhotoPath,
+      'profile_photo_url': profilePhotoUrl,
+      'latitude': latitude,
+      'longitude': longitude,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
   }
 }

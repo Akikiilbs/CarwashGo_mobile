@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../navigation/bottom_nav.dart';
+import 'orders_tab.dart';
 
-// FILE YANG BENAR
-import 'profile_tab.dart';
-
-class MenuPage extends StatelessWidget {
-  const MenuPage({super.key});
+class OrdersPage extends StatelessWidget {
+  const OrdersPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -17,15 +15,15 @@ class MenuPage extends StatelessWidget {
         centerTitle: true,
         automaticallyImplyLeading: false,
         title: const Text(
-          "Profil",
+          "Pesanan Ku",
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
-      body: const ProfileTab(),
-      bottomNavigationBar: const BottomNav(currentIndex: 2),
+      body: const OrdersTab(),
+      bottomNavigationBar: const BottomNav(currentIndex: 1),
     );
   }
 }

@@ -6,6 +6,7 @@ import '../../models/mitra_station.dart';
 import '../navigation/detail_station_page.dart';
 import '../navigation/bottom_nav.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/user_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -18,9 +19,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // ✅ Trigger fetch data dari backend saat pertama kali buka Home
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StationProvider>().fetchStations();
+      final user = context.read<UserProvider>();
+      context.read<StationProvider>().fetchStations(
+        lat: user.latitude,
+        lng: user.longitude,
+      );
       context.read<NotificationProvider>().initFirebase();
     });
   }
@@ -34,7 +38,13 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: const Color(0xFFF6F8FB),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => stationProv.fetchStations(),
+          onRefresh: () async {
+            final user = context.read<UserProvider>();
+            await stationProv.fetchStations(
+              lat: user.latitude,
+              lng: user.longitude,
+            );
+          },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -43,21 +53,60 @@ class _HomePageState extends State<HomePage> {
               children: [
                 // ================= HEADER =================
                 const SizedBox(height: 10),
-                const Text(
-                  "Welcome 👋",
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  "Have a good day",
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.black54,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Welcome 👋",
+                          style: TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueAccent,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          "Have a good day",
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Consumer<NotificationProvider>(
+                      builder: (context, notifProv, child) {
+                        final hasUnread = notifProv.notifications.any((n) => n.isNew == true);
+                        return Stack(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications_none_rounded, color: Colors.blueAccent, size: 30),
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/notification');
+                              },
+                            ),
+                            if (hasUnread)
+                              Positioned(
+                                right: 10,
+                                top: 10,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.redAccent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 24),

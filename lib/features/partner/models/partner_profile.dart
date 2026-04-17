@@ -18,7 +18,7 @@ class PartnerServiceItem {
       id: json['id'] as int,
       serviceName: json['service_name'] as String?,
       vehicleType: json['vehicle_type'] as String?,
-      price: (json['price'] as num).toDouble(),
+      price: double.tryParse(json['price'].toString()) ?? 0.0,
       isActive: json['is_active'] == true,
     );
   }
@@ -75,10 +75,10 @@ class PartnerProfile {
       address: json['address'] as String? ?? '',
       status: json['status'] as String? ?? '',
       latitude: json['latitude'] != null
-          ? (json['latitude'] as num).toDouble()
+          ? double.tryParse(json['latitude'].toString())
           : null,
       longitude: json['longitude'] != null
-          ? (json['longitude'] as num).toDouble()
+          ? double.tryParse(json['longitude'].toString())
           : null,
       user: PartnerUserInfo.fromJson(json['user'] as Map<String, dynamic>),
       services: (json['services'] as List<dynamic>? ?? [])

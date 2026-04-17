@@ -11,8 +11,9 @@ class NotificationPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final notifProv = Provider.of<NotificationProvider>(context);
 
-    final current = notifProv.notifications.where((n) => n.isNew).toList();
-    final prev = notifProv.notifications.where((n) => !n.isNew).toList();
+    final notifications = notifProv.getCustomerNotifications();
+    final current = notifications.where((n) => n.isNew).toList();
+    final prev = notifications.where((n) => !n.isNew).toList();
 
     return Scaffold(
       backgroundColor: const Color(0xff3B8EF3),
@@ -32,14 +33,14 @@ class NotificationPage extends StatelessWidget {
             icon: const Icon(Icons.done_all, color: Colors.blue),
             tooltip: 'Tandai semua dibaca',
             onPressed: () {
-              notifProv.markAllAsRead();
+              notifProv.markAllAsRead(role: 'customer');
             },
           ),
           IconButton(
             icon: const Icon(Icons.delete_sweep, color: Colors.redAccent),
             tooltip: 'Hapus semua notifikasi',
             onPressed: () {
-              notifProv.clearNotifications();
+              notifProv.clearNotifications(role: 'customer');
             },
           )
         ],
@@ -77,8 +78,7 @@ class NotificationPage extends StatelessWidget {
         ),
       ),
 
-      // ✅ hapus const
-      bottomNavigationBar: BottomNav(currentIndex: 1),
+      // ✅ hapus bottomNavigationBar
     );
   }
 

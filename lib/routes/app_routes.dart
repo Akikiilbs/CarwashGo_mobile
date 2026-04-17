@@ -24,6 +24,7 @@ import '../pages/notification/notification_page.dart';
 import '../pages/menu/menu_page.dart';
 
 import '../pages/mitra/home_mitra_page.dart';
+import '../pages/mitra/mitra_notification_page.dart';
 import '../pages/mitra/mitra_orders_page.dart';
 import '../pages/mitra/mitra_profile_page.dart';
 import '../pages/mitra/mitra_income_page.dart';
@@ -34,6 +35,7 @@ import '../pages/mitra/mitra_services_page.dart';
 import '../pages/payment/qris_page.dart';
 import '../pages/menu/track_mitra_page.dart';
 import '../models/order_model.dart';
+import '../pages/menu/orders_page.dart';
 
 class AppRoutes {
   static final routes = <String, WidgetBuilder>{
@@ -66,8 +68,10 @@ class AppRoutes {
     },
     '/home': (_) => const HomePage(),
     '/menu': (_) => const MenuPage(),
+    '/orders': (_) => const OrdersPage(),
     '/notification': (_) => const NotificationPage(),
     '/mitra-home': (_) => const HomeMitraPage(),
+    '/mitra-notification': (_) => const MitraNotificationPage(),
     '/mitra-orders': (_) => const MitraOrdersPage(),
     '/mitra-profile': (_) => const MitraProfilePage(),
     '/mitra-services': (_) => const MitraServicesPage(),

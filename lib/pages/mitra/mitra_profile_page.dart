@@ -279,8 +279,8 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
     if (!mounted) return;
     if (picked == null || picked is! Map) return;
 
-    final newLat = (picked["latitude"] as num).toDouble();
-    final newLng = (picked["longitude"] as num).toDouble();
+    final newLat = double.parse(picked["latitude"].toString());
+    final newLng = double.parse(picked["longitude"].toString());
     final newAddress = (picked["address"] ?? "").toString();
 
     final oldLat = mitra.latitude;
@@ -375,6 +375,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.blueAccent,
         elevation: 0,
         title: const Text(

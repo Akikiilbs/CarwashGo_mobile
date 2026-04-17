@@ -55,6 +55,8 @@ class _AppGatePageState extends State<AppGatePage> {
                 role: user.role ?? '',
                 address: user.address ?? '',
                 profilePhotoUrl: user.profilePhotoUrl ?? '',
+                latitude: user.latitude,
+                longitude: user.longitude,
               );
 
           // Redirect berdasarkan role
@@ -87,11 +89,11 @@ class _AppGatePageState extends State<AppGatePage> {
   }
 
   void _navigateToCustomerHome() {
-    Navigator.pushReplacementNamed(context, '/home');
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
   void _navigateToPartnerHome() {
-    Navigator.pushReplacementNamed(context, '/mitra-home');
+    Navigator.pushNamedAndRemoveUntil(context, '/mitra-home', (route) => false);
   }
 
   @override

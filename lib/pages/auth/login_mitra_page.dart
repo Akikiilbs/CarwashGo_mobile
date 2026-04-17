@@ -86,7 +86,7 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
       // bersihkan cache order lama
       context.read<OrderProvider>().clearOrders();
 
-      Navigator.pushReplacementNamed(context, '/mitra-home');
+      Navigator.pushNamedAndRemoveUntil(context, '/mitra-home', (route) => false);
     } else {
       String msg = res.message;
 

@@ -77,13 +77,17 @@ class _LoginPageState extends State<LoginPage> {
               email: u.email,
               phone: u.phone,
               role: u.role,
+              address: u.address,
+              profilePhotoUrl: u.profilePhotoUrl ?? '',
+              latitude: u.latitude,
+              longitude: u.longitude,
             );
       }
 
       // ✅ bersihkan cache order lama (kalau sebelumnya login role lain)
       context.read<OrderProvider>().clearOrders();
 
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } else {
       if (!mounted) return;
 

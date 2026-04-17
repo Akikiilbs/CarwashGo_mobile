@@ -59,9 +59,17 @@ class AuthApi {
   }
 
   // PUT /auth/profile
-  Future<AuthResponse> updateProfile({required String address}) async {
+  Future<AuthResponse> updateProfile({
+    required String address,
+    double? latitude,
+    double? longitude,
+  }) async {
     try {
-      final res = await _dio.put('/auth/profile', data: {'address': address});
+      final res = await _dio.put('/auth/profile', data: {
+        'address': address,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+      });
       return AuthResponse.fromJson(res.data);
     } on DioException catch (e) {
       if (e.response != null && e.response?.data is Map<String, dynamic>) {

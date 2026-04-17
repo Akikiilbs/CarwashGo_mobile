@@ -97,6 +97,7 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF6F8FF),
         appBar: AppBar(
+          automaticallyImplyLeading: false,
           backgroundColor: Colors.white,
           foregroundColor: Colors.black87,
           elevation: 0,

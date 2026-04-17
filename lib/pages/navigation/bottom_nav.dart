@@ -32,7 +32,7 @@ class BottomNav extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _item(CupertinoIcons.house_fill, CupertinoIcons.house, 0, '/home', context),
-          _item(CupertinoIcons.bell_fill, CupertinoIcons.bell, 1, '/notification', context),
+          _item(CupertinoIcons.doc_text_fill, CupertinoIcons.doc_text, 1, '/orders', context),
           _item(CupertinoIcons.person_crop_circle_fill, CupertinoIcons.person, 2, '/menu', context),
         ],
       ),
@@ -89,9 +89,9 @@ class BottomNav extends StatelessWidget {
       case 0:
         return "Home";
       case 1:
-        return "Notif";
+        return "Pesanan";
       case 2:
-        return "Menu";
+        return "Profil";
       default:
         return "";
     }
