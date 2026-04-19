@@ -242,6 +242,7 @@ class OrderProvider extends ChangeNotifier {
       paymentStatus: (o['payment_status'] ?? 'unpaid').toString(),
       total: totalAmount,
       notes: (o['notes'] ?? '').toString(),
+      paymentProof: o['payment_proof']?.toString(),
     );
   }
 
@@ -318,6 +319,23 @@ class OrderProvider extends ChangeNotifier {
       paymentStatus: (o['payment_status'] ?? 'unpaid').toString(),
       total: totalAmount,
       notes: (o['notes'] ?? '').toString(),
+      paymentProof: o['payment_proof']?.toString(),
     );
+  }
+
+  Future<SimpleApiResponse> uploadPaymentProof({
+    required int orderId,
+    required String filePath,
+  }) async {
+    _setLoading(true);
+    try {
+      final res = await _orderApi.uploadPaymentProof(
+        orderId: orderId,
+        filePath: filePath,
+      );
+      return res;
+    } finally {
+      _setLoading(false);
+    }
   }
 }

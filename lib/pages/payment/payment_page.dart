@@ -6,6 +6,8 @@ import '../../models/notification_model.dart';
 import '../../models/order_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/order_provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class PaymentPage extends StatefulWidget {
   final Map<String, dynamic> bookingData;
@@ -21,53 +23,74 @@ class PaymentPage extends StatefulWidget {
 
 class _PaymentPageState extends State<PaymentPage> {
   bool _isPaying = false;
+  File? _image;
 
-  void _savePaidOrder() {
-    final bookingData = widget.bookingData;
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
-    Provider.of<OrderProvider>(context, listen: false).addOrder(
-      Order(
-        mitraId: bookingData['mitraId']?.toString(), // Ambil dari bookingData jika ada
-        title: 'Cuci Mobil',
-        date: bookingData['date']?.toString() ?? '-',
-        time: bookingData['time']?.toString() ?? '-',
-        status: 'menunggu mitra',
-        image: 'assets/images/mobil1.png',
-        location: bookingData['address']?.toString() ?? '-',
-        detailAddress: bookingData['detailAddress']?.toString() ?? '-',
-        plateNumber: bookingData['plateNumber']?.toString() ?? '-',
-        username: bookingData['username']?.toString() ?? 'User',
-        phoneNumber: bookingData['phoneNumber']?.toString() ?? '-',
-        bookingId: bookingData['bookingId']?.toString() ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
-        carType: bookingData['carType']?.toString() ?? '-',
-        price: (bookingData['price'] as num?)?.toInt() ?? 0,
-        servicePrice: (bookingData['servicePrice'] as num?)?.toInt() ?? 0,
-        tax: (bookingData['tax'] as num?)?.toInt() ?? 0,
-        discount: (bookingData['discount'] as num?)?.toInt() ?? 0,
-        total: (bookingData['total'] as num?)?.toInt() ?? 0,
-      ),
-    );
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
 
-    Provider.of<NotificationProvider>(context, listen: false).addNotification(
-      AppNotification(
-        title: 'Pembayaran Menunggu Konfirmasi',
-        message: 'Pesanan Anda berhasil dibuat dan menunggu verifikasi pembayaran oleh.',
-        time: 'Baru saja',
-        isNew: true,
-      ),
-    );
+  Future<void> _handlePayment() async {
+    if (_image == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan pilih foto bukti transfer terlebih dahulu')),
+      );
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pembayaran disimpan dan menunggu verifikasi')),
-    );
+    setState(() => _isPaying = true);
 
-    // Kembali ke home
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/home',
-      (route) => false,
-    );
+    try {
+      final orderProv = context.read<OrderProvider>();
+      final bookingIdStr = widget.bookingData['bookingId']?.toString();
+      final orderId = int.tryParse(bookingIdStr ?? '');
+
+      if (orderId == null) {
+        throw Exception('ID Pesanan tidak valid');
+      }
+
+      // 1. Upload ke Backend
+      final res = await orderProv.uploadPaymentProof(
+        orderId: orderId,
+        filePath: _image!.path,
+      );
+
+      if (!mounted) return;
+
+      if (res.status == 'success') {
+        // 2. Notifikasi Lokal & Navigator
+        Provider.of<NotificationProvider>(context, listen: false).addNotification(
+          AppNotification(
+            title: 'Pembayaran Menunggu Konfirmasi',
+            message: 'Bukti pembayaran berhasil diunggah dan sedang diverifikasi oleh admin.',
+            time: 'Baru saja',
+            isNew: true,
+          ),
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bukti berhasil diunggah! Menunggu verifikasi admin.')),
+        );
+
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message)),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengirim bukti: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isPaying = false);
+    }
   }
 
   @override
@@ -201,6 +224,57 @@ class _PaymentPageState extends State<PaymentPage> {
               ),
             ),
             const SizedBox(height: 40),
+            const SizedBox(height: 24),
+            const Text(
+              "Upload Bukti Transfer",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: _isPaying ? null : _pickImage,
+              child: Container(
+                width: double.infinity,
+                height: 180,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[300]!, width: 1.5),
+                ),
+                child: _image != null
+                    ? Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.file(_image!, width: double.infinity, height: 180, fit: BoxFit.cover),
+                          ),
+                          Positioned(
+                            right: 10,
+                            top: 10,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.black54,
+                              child: IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white),
+                                onPressed: () => setState(() => _image = null),
+                              ),
+                            ),
+                          )
+                        ],
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo_rounded, size: 40, color: Colors.blueAccent.withOpacity(0.5)),
+                          const SizedBox(height: 10),
+                          const Text("Pilih Foto Bukti Transfer", style: TextStyle(color: Colors.black54)),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -211,13 +285,7 @@ class _PaymentPageState extends State<PaymentPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: _isPaying ? null : () {
-                  setState(() => _isPaying = true);
-                  // Simulasikan delay network sedikit
-                  Future.delayed(const Duration(seconds: 1), () {
-                    _savePaidOrder();
-                  });
-                },
+                onPressed: (_isPaying || _image == null) ? null : _handlePayment,
                 child: _isPaying
                     ? const SizedBox(
                         height: 22,
@@ -228,7 +296,7 @@ class _PaymentPageState extends State<PaymentPage> {
                         ),
                       )
                     : const Text(
-                        "Saya Sudah Transfer",
+                        "Kirim Bukti Pembayaran",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,

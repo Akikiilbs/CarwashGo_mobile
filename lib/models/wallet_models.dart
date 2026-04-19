@@ -38,6 +38,7 @@ class WalletTransaction {
   final int amount; // + masuk, - keluar (payout)
   final DateTime createdAt;
   final String status; // unsettled|settled|pending|success|failed|simulated
+  final String? transferProof;
 
   WalletTransaction({
     required this.id,
@@ -47,6 +48,7 @@ class WalletTransaction {
     required this.amount,
     required this.createdAt,
     required this.status,
+    this.transferProof,
   });
 
   factory WalletTransaction.fromJson(Map<String, dynamic> json) {
@@ -69,6 +71,7 @@ class WalletTransaction {
       amount: _toInt(json['amount']),
       createdAt: _toDt(json['created_at']),
       status: (json['status'] ?? '').toString(),
+      transferProof: json['transfer_proof']?.toString(),
     );
   }
 }

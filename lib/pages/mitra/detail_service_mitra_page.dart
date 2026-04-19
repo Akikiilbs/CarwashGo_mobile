@@ -180,8 +180,12 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
 
   String _labelPayment(String p) {
     final st = p.toLowerCase();
-    final isPaid = st == 'paid' || st == 'settlement' || st == 'capture';
-    return isPaid ? 'Sudah Bayar' : 'Belum Bayar';
+    if (st == 'paid' || st == 'settlement' || st == 'capture') {
+      return 'Sudah Bayar';
+    } else if (st == 'pending_verification') {
+      return 'Menunggu Verifikasi Admin';
+    }
+    return 'Belum Bayar';
   }
 
   Widget _cardInfo(Order o) {

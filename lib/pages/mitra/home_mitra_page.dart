@@ -96,7 +96,7 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
               const SizedBox(height: 20),
 
               const Text(
-                "Selamat Datang, Mitra",
+                "Selamat Datang 👋",
                 style: TextStyle(
                   fontSize: 26,
                   fontWeight: FontWeight.w800,

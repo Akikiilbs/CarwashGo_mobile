@@ -217,4 +217,35 @@ class OrderApi {
 
     return PaymentModel.fromJson(data);
   }
+
+  // =========================================================
+  // ✅ UPLOAD PAYMENT PROOF
+  // POST /orders/{id}/upload-payment-proof
+  // =========================================================
+  Future<SimpleApiResponse> uploadPaymentProof({
+    required int orderId,
+    required String filePath,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'payment_proof': await MultipartFile.fromFile(filePath),
+      });
+
+      final res = await _dio.post(
+        '/orders/$orderId/upload-payment-proof',
+        data: formData,
+      );
+
+      return SimpleApiResponse.fromJson(res.data);
+    } on DioException catch (e) {
+      if (e.response != null && e.response?.data is Map<String, dynamic>) {
+        return SimpleApiResponse.fromJson(e.response!.data);
+      }
+      return SimpleApiResponse(
+          status: 'error', message: 'Gagal mengunggah bukti pembayaran');
+    } catch (e) {
+      return SimpleApiResponse(
+          status: 'error', message: 'Terjadi kesalahan: ${e.toString()}');
+    }
+  }
 }

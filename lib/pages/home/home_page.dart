@@ -61,7 +61,7 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Welcome 👋",
+                          "Selamat Datang 👋",
                           style: TextStyle(
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
@@ -70,7 +70,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          "Have a good day",
+                          "Semoga harimu menyenangkan",
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.black54,
@@ -118,7 +118,7 @@ class _HomePageState extends State<HomePage> {
 
                 // ================= TITLE =================
                 const Text(
-                  "Recommended Station",
+                  "Stasiun Cuci disekitar anda",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,

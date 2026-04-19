@@ -65,7 +65,7 @@ class _MitraIncomePageState extends State<MitraIncomePage> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
-            _historyList(prov.transactions),
+            _historyList(context, prov.transactions),
             const SizedBox(height: 6),
             const Text(
               'Tarik saldo otomatis: saat order selesai dan pembayaran valid, sistem akan membuat pendapatan mitra dan (opsional) menjalankan payout instan via IRIS.',
@@ -346,7 +346,7 @@ Widget _actionBtn({required IconData icon, required String label, required VoidC
   );
 }
 
-Widget _historyList(List<WalletTransaction> items) {
+Widget _historyList(BuildContext context, List<WalletTransaction> items) {
   if (items.isEmpty) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -409,12 +409,85 @@ Widget _historyList(List<WalletTransaction> items) {
                 Text(amountText, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
                 const SizedBox(height: 4),
                 Text(_fmtTime(tx.createdAt), style: const TextStyle(color: Colors.black54, fontSize: 12)),
+                if (tx.transferProof != null && tx.transferProof!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: InkWell(
+                      onTap: () => _showProofDialog(context, tx.transferProof!),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.image_outlined, size: 14, color: Colors.blueAccent),
+                            SizedBox(width: 4),
+                            Text(
+                              'Lihat Bukti',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             )
           ],
         ),
       );
     }).toList(),
+  );
+}
+
+void _showProofDialog(BuildContext context, String imageUrl) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AppBar(
+            title: const Text('Bukti Transfer', style: TextStyle(fontSize: 16)),
+            centerTitle: true,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            actions: [
+              IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+            ],
+          ),
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.7,
+            ),
+            child: InteractiveViewer(
+              child: Image.network(
+                imageUrl,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(child: CircularProgressIndicator());
+                },
+                errorBuilder: (context, error, stackTrace) => const Padding(
+                  padding: EdgeInsets.all(20.0),
+                  child: Text('Gagal memuat gambar bukti.'),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    ),
   );
 }
 

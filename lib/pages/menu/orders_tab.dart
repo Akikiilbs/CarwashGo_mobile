@@ -10,6 +10,8 @@ import '../payment/midtrans_checkout_page.dart';
 import '../booking/detail_order_page.dart';
 import '../review/review_popup.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class OrdersTab extends StatefulWidget {
   const OrdersTab({super.key});
@@ -22,9 +24,7 @@ class _OrdersTabState extends State<OrdersTab> {
   bool _popupShown = false;
   final Set<String> _reviewedOrderIds = {};
 
-  final MidtransApi _midtransApi = MidtransApi();
-
-  // ===================== PAYMENT (MIDTRANS WEBVIEW) =====================
+  // ===================== PAYMENT (MANUAL QRIS) =====================
   Future<void> _startPayment(BuildContext context, dynamic order) async {
     if ((order.status ?? '').toString() != 'accepted') {
       await showDialog(
@@ -43,61 +43,261 @@ class _OrdersTabState extends State<OrdersTab> {
       return;
     }
 
-    final int? orderId = int.tryParse((order.bookingId ?? '').toString());
-    if (orderId == null) {
+    // Tampilkan Dialog Instruksi QRIS Manual
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _ManualQRISBottomSheet(order: order),
+    );
+  }
+
+  // ===================== WIDGET BOTTOM SHEET MANUAL QRIS =====================
+}
+
+class _ManualQRISBottomSheet extends StatefulWidget {
+  final dynamic order;
+  const _ManualQRISBottomSheet({required this.order});
+
+  @override
+  State<_ManualQRISBottomSheet> createState() => _ManualQRISBottomSheetState();
+}
+
+class _ManualQRISBottomSheetState extends State<_ManualQRISBottomSheet> {
+  File? _image;
+  bool _isUploading = false;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<void> _upload(BuildContext context) async {
+    if (_image == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Order ID tidak valid')),
+        const SnackBar(content: Text('Silakan pilih foto bukti transfer terlebih dahulu')),
       );
       return;
     }
 
-    // Tampilkan Loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
+    setState(() => _isUploading = true);
 
     try {
-      final result = await _midtransApi.createCheckout(orderId: orderId);
-      
-      if (!mounted) return;
-      Navigator.pop(context); // Tutup Loading
-
-      // Navigasi ke WebView di dalam aplikasi (PREMIUM FLOW)
-      final payResult = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MidtransCheckoutPage(
-            checkoutUrl: result.redirectUrl,
-          ),
-        ),
+      final orderProv = context.read<OrderProvider>();
+      final orderId = int.parse(widget.order.bookingId);
+      final res = await orderProv.uploadPaymentProof(
+        orderId: orderId,
+        filePath: _image!.path,
       );
 
-      // Refresh data setelah balik dari pembayaran
-      if (mounted) {
-        context.read<OrderProvider>().loadCustomerOrders();
-        
-        if (payResult == 'success' || payResult == 'pending') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Pembayaran sedang diproses. Silahakan cek status berkala.')),
-          );
-        }
+      if (!mounted) return;
+
+      if (res.status == 'success') {
+        Navigator.pop(context); // Tutup bottomsheet
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bukti berhasil diunggah! Menunggu verifikasi admin.')),
+        );
+        orderProv.loadCustomerOrders();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message)),
+        );
       }
     } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context); // Tutup Loading
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal membuat pembayaran: ${e.toString().replaceAll('Exception: ', '')}')),
+        SnackBar(content: Text('Error: $e')),
       );
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final order = widget.order;
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            "Pembayaran QRIS Manual",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.blueAccent,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.blueAccent.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.qr_code_scanner, size: 80, color: Colors.blueAccent.withOpacity(0.5)),
+                        const SizedBox(height: 12),
+                        const Text(
+                          "Pindai & Bayar",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          "Silakan pindai QRIS dan bayar sesuai nominal di bawah.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 13, color: Colors.black54),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Detail Pesanan",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  _rowInfo("Booking ID", "#${order.bookingId}"),
+                  _rowInfo("Total Pembayaran", "Rp ${order.total}"),
+                  const Divider(height: 32),
+                  const Text(
+                    "Upload Bukti Transfer",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: _isUploading ? null : _pickImage,
+                    child: Container(
+                      width: double.infinity,
+                      height: 160,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey[300]!, style: BorderStyle.solid),
+                      ),
+                      child: _image != null
+                          ? Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.file(_image!, width: double.infinity, height: 160, fit: BoxFit.cover),
+                                ),
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: CircleAvatar(
+                                    backgroundColor: Colors.black54,
+                                    radius: 16,
+                                    child: IconButton(
+                                      icon: const Icon(Icons.close, size: 16, color: Colors.white),
+                                      onPressed: () => setState(() => _image = null),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            )
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_a_photo_outlined, size: 40, color: Colors.grey[400]),
+                                const SizedBox(height: 8),
+                                Text("Ketuk untuk pilih foto", style: TextStyle(color: Colors.grey[600])),
+                              ],
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 55,
+            child: ElevatedButton(
+              onPressed: (_isUploading || _image == null) ? null : () => _upload(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 0,
+              ),
+              child: _isUploading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text(
+                      "Kirim Bukti Pembayaran",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _rowInfo(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.black54)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+}
+
+class _OldOrdersTabState {
+  void _confirmManualPayment(BuildContext context, String bookingId) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Konfirmasi pembayaran terkirim. Mohon tunggu verifikasi admin.')),
+    );
+    // Di sini kita bisa panggil API backend untuk update status pembayaran ke 'pending_verification'
+    // Untuk dummy/mock ini, kita cukup refresh UI.
+    context.read<OrderProvider>().loadCustomerOrders();
   }
 
   Widget _paymentBadge(String status) {
     final s = status.toLowerCase();
     final isPaid = s == 'paid' || s == 'settlement' || s == 'capture';
-    final color = isPaid ? Colors.green : Colors.orange;
-    final label = isPaid ? 'Sudah Bayar' : 'Belum Bayar';
+    final isPending = s == 'pending_verification';
+    
+    final color = isPaid ? Colors.green : (isPending ? Colors.blueAccent : Colors.orange);
+    final label = isPaid ? 'Sudah Bayar' : (isPending ? 'Verifikasi' : 'Belum Bayar');
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
@@ -335,7 +535,10 @@ class _OrdersTabState extends State<OrdersTab> {
                         const SizedBox(height: 6),
                         _paymentBadge(order.paymentStatus ?? 'unpaid'),
                         const SizedBox(height: 8),
-                        if (order.status == 'accepted' && ((order.paymentStatus ?? 'unpaid') != 'paid' && (order.paymentStatus ?? '') != 'settlement'))
+                        if (order.status == 'accepted' && 
+                           ((order.paymentStatus ?? 'unpaid') != 'paid' && 
+                            (order.paymentStatus ?? '') != 'settlement' &&
+                            (order.paymentStatus ?? '') != 'pending_verification'))
                           SizedBox(
                             height: 32,
                             child: ElevatedButton(
