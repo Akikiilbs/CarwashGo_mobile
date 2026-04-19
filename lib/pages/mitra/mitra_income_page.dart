@@ -87,7 +87,10 @@ class _MitraIncomePageState extends State<MitraIncomePage> {
 
   void _showWithdrawSheet(BuildContext context) {
     final prov = context.read<WalletProvider>();
-    final ctrl = TextEditingController();
+    final ctrlAmount = TextEditingController();
+    final ctrlBankName = TextEditingController();
+    final ctrlAccount = TextEditingController();
+    final ctrlAccountName = TextEditingController();
 
     showModalBottomSheet(
       context: context,
@@ -118,10 +121,35 @@ class _MitraIncomePageState extends State<MitraIncomePage> {
               ),
               const SizedBox(height: 12),
               TextField(
-                controller: ctrl,
+                controller: ctrlAmount,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Jumlah (Rp)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ctrlBankName,
+                decoration: const InputDecoration(
+                  labelText: 'Nama Bank (misal: BCA, Mandiri)',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ctrlAccount,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nomor Rekening',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ctrlAccountName,
+                decoration: const InputDecoration(
+                  labelText: 'Atas Nama Rekening',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -131,15 +159,21 @@ class _MitraIncomePageState extends State<MitraIncomePage> {
                 height: 46,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final amount = int.tryParse(ctrl.text.replaceAll('.', '')) ?? 0;
-                    if (amount <= 0) {
+                    final amount = int.tryParse(ctrlAmount.text.replaceAll('.', '')) ?? 0;
+                    if (amount < 100000) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Jumlah tidak valid')), 
+                        const SnackBar(content: Text('Minimal penarikan adalah Rp 100.000')), 
+                      );
+                      return;
+                    }
+                    if (ctrlBankName.text.isEmpty || ctrlAccount.text.isEmpty || ctrlAccountName.text.isEmpty) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('Harap lengkapi detail bank')), 
                       );
                       return;
                     }
                     Navigator.pop(ctx);
-                    final msg = await prov.withdraw(amount);
+                    final msg = await prov.withdraw(amount, ctrlBankName.text, ctrlAccount.text, ctrlAccountName.text);
                     if (!mounted) return;
                     ScaffoldMessenger.of(context)
                         .showSnackBar(SnackBar(content: Text(msg)));

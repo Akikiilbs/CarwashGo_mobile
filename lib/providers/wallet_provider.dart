@@ -61,10 +61,14 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
-  Future<String> withdraw(int amount) async {
+  Future<String> withdraw(
+      int amount, String bankName, String bankAccount, String accountName) async {
     try {
       final res = await _dio.post('/partner/wallet/withdraw', data: {
         'amount': amount,
+        'bank_name': bankName,
+        'bank_account_number': bankAccount,
+        'account_name': accountName,
       });
 
       final body = res.data;

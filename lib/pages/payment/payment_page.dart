@@ -2,13 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../features/payment/data/midtrans_api.dart';
 import '../../models/notification_model.dart';
 import '../../models/order_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/order_provider.dart';
-import '../../services/deep_link_service.dart';
-import 'midtrans_checkout_page.dart';
 
 class PaymentPage extends StatefulWidget {
   final Map<String, dynamic> bookingData;
@@ -23,87 +20,7 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-  final MidtransApi _midtransApi = MidtransApi();
   bool _isPaying = false;
-  StreamSubscription<Uri>? _deepLinkSub;
-
-  Future<void> _startMidtransPayment() async {
-    if (_isPaying) return;
-
-    setState(() => _isPaying = true);
-    try {
-      final checkout = await _midtransApi.createCheckout(
-        bookingData: widget.bookingData,
-      );
-
-      if (!mounted) return;
-
-      const useExternalBrowser = false;
-      if (useExternalBrowser) {
-        _listenForFinishDeepLink();
-      }
-
-      final completed = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MidtransCheckoutPage(
-            checkoutUrl: checkout.redirectUrl,
-            useExternalBrowser: useExternalBrowser,
-          ),
-        ),
-      );
-
-      // Cek status transaksi setelah kembali dari WebView
-      final transactionStatus =
-          await _midtransApi.getTransactionStatus(checkout.orderId);
-
-      final isPaid = transactionStatus == 'settlement' ||
-          transactionStatus == 'capture' ||
-          completed == true;
-
-      if (!mounted) return;
-
-      if (isPaid) {
-        _savePaidOrder();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              transactionStatus.isEmpty
-                  ? 'Pembayaran belum selesai'
-                  : 'Status pembayaran: $transactionStatus',
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memulai pembayaran Midtrans: $e')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isPaying = false);
-      }
-    }
-  }
-
-  void _listenForFinishDeepLink() {
-    _deepLinkSub?.cancel();
-    _deepLinkSub = DeepLinkService.instance.stream.listen((uri) {
-      if (_isFinishLink(uri) && mounted) {
-        if (Navigator.canPop(context)) {
-          Navigator.pop(context, true);
-        }
-      }
-    });
-  }
-
-  bool _isFinishLink(Uri uri) {
-    return uri.scheme == 'carwashgo' &&
-        uri.host == 'payment' &&
-        uri.path == '/finish';
-  }
 
   void _savePaidOrder() {
     final bookingData = widget.bookingData;
@@ -134,15 +51,15 @@ class _PaymentPageState extends State<PaymentPage> {
 
     Provider.of<NotificationProvider>(context, listen: false).addNotification(
       AppNotification(
-        title: 'Pembayaran Berhasil',
-        message: 'Pesanan Anda berhasil dibuat dan menunggu konfirmasi mitra.',
+        title: 'Pembayaran Menunggu Konfirmasi',
+        message: 'Pesanan Anda berhasil dibuat dan menunggu verifikasi pembayaran oleh.',
         time: 'Baru saja',
         isNew: true,
       ),
     );
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pembayaran berhasil')),
+      const SnackBar(content: Text('Pembayaran disimpan dan menunggu verifikasi')),
     );
 
     // Kembali ke home
@@ -151,12 +68,6 @@ class _PaymentPageState extends State<PaymentPage> {
       '/home',
       (route) => false,
     );
-  }
-
-  @override
-  void dispose() {
-    _deepLinkSub?.cancel();
-    super.dispose();
   }
 
   @override
@@ -180,7 +91,7 @@ class _PaymentPageState extends State<PaymentPage> {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          "Pembayaran",
+          "Pembayaran Manual QRIS",
           style: TextStyle(
             color: Colors.blueAccent,
             fontWeight: FontWeight.bold,
@@ -200,7 +111,7 @@ class _PaymentPageState extends State<PaymentPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Metode Pembayaran",
+              "Instruksi Pembayaran",
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
@@ -209,37 +120,31 @@ class _PaymentPageState extends State<PaymentPage> {
             ),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.blueAccent,
-                  width: 1.5,
-                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.blueAccent.withOpacity(0.3), width: 1.5),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12.withOpacity(0.05),
-                    blurRadius: 4,
-                    offset: const Offset(1, 2),
-                  )
+                  BoxShadow(color: Colors.black12.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
                 ],
               ),
-              child: Row(
-                children: const [
-                  Icon(Icons.account_balance_wallet_outlined,
-                      color: Colors.blueAccent, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      "Midtrans (QRIS / VA / E-Wallet)",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
+              child: Column(
+                children: [
+                  Icon(Icons.qr_code_scanner, size: 80, color: Colors.blueAccent.withOpacity(0.5)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "Gambar QRIS Tersedia Segera",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
+                    textAlign: TextAlign.center,
                   ),
-                  Icon(Icons.check_circle, color: Colors.blueAccent),
+                  const SizedBox(height: 12),
+                  const Text(
+                    "Pindai kode QRIS menggunakan M-Banking atau E-Wallet kesayangan Anda (OVO, GoPay, Dana, dll). Pastikan nama Merchant sesuai.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+                  ),
                 ],
               ),
             ),
@@ -306,7 +211,13 @@ class _PaymentPageState extends State<PaymentPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: _isPaying ? null : _startMidtransPayment,
+                onPressed: _isPaying ? null : () {
+                  setState(() => _isPaying = true);
+                  // Simulasikan delay network sedikit
+                  Future.delayed(const Duration(seconds: 1), () {
+                    _savePaidOrder();
+                  });
+                },
                 child: _isPaying
                     ? const SizedBox(
                         height: 22,
@@ -317,28 +228,13 @@ class _PaymentPageState extends State<PaymentPage> {
                         ),
                       )
                     : const Text(
-                        "Bayar dengan Midtrans",
+                        "Saya Sudah Transfer",
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: OutlinedButton(
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    "/qris",
-                    arguments: widget.bookingData,
-                  );
-                },
-                child: const Text("Metode QRIS Lama"),
               ),
             ),
           ],
