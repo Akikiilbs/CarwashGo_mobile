@@ -375,15 +375,18 @@ class _DetailOrderPageState extends State<DetailOrderPage> {
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(top: 10, bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: Colors.blueAccent,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.location_on, color: Colors.blueAccent, size: 26),
+              const Icon(Icons.location_on, color: Colors.white, size: 26),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
@@ -393,30 +396,30 @@ class _DetailOrderPageState extends State<DetailOrderPage> {
                       "Alamat Lengkap",
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.blueAccent),
+                          color: Colors.white),
                     ),
                     const SizedBox(height: 5),
                     if (_loadingAddress)
                       const Text('Mengambil alamat...',
-                          style: TextStyle(color: Colors.black54))
+                          style: TextStyle(color: Colors.white70))
                     else ...[
-                      Text(mainAddress),
-                      if (detail.isNotEmpty) Text(detail),
+                      Text(mainAddress, style: const TextStyle(color: Colors.white)),
+                      if (detail.isNotEmpty) Text(detail, style: const TextStyle(color: Colors.white70)),
                     ],
                     const SizedBox(height: 8),
                     if (_loadingPartner)
                       const Text('Mengambil lokasi mitra...',
-                          style: TextStyle(color: Colors.black54))
+                          style: TextStyle(color: Colors.white70))
                     else if (distanceKm != null)
                       Text(
                         'Jarak ke mitra: ${distanceKm.toStringAsFixed(2)} km',
                         style: const TextStyle(
-                            fontWeight: FontWeight.w600, color: Colors.black87),
+                            fontWeight: FontWeight.w600, color: Colors.white),
                       )
                     else
                       const Text(
                         'Lokasi mitra belum tersedia untuk menghitung jarak.',
-                        style: TextStyle(color: Colors.black54),
+                        style: TextStyle(color: Colors.white70),
                       ),
                   ],
                 ),

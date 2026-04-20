@@ -281,8 +281,11 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: Colors.blueAccent,
               borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,26 +294,26 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                   "Alamat Lengkap",
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 6),
                 if (_loadingAddress)
                   const Text(
                     'Mengambil alamat...',
-                    style: TextStyle(color: Colors.black54),
+                    style: TextStyle(color: Colors.white70),
                   )
                 else ...[
-                  Text(addressText),
+                  Text(addressText, style: const TextStyle(color: Colors.white)),
                   if (o.detailAddress.trim().isNotEmpty)
-                    Text(o.detailAddress.trim()),
+                    Text(o.detailAddress.trim(), style: const TextStyle(color: Colors.white70)),
                 ],
                 if (_loadingMitra)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
                     child: Text(
                       'Mengambil lokasi mitra...',
-                      style: TextStyle(color: Colors.black54),
+                      style: TextStyle(color: Colors.white70),
                     ),
                   )
                 else if (distanceKm != null)
@@ -318,7 +321,7 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       'Jarak ke lokasi mitra: ${distanceKm.toStringAsFixed(2)} km',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
                     ),
                   ),
                 const SizedBox(height: 12),
@@ -481,7 +484,7 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
               },
         style: ElevatedButton.styleFrom(
           backgroundColor: enabled ? Colors.blueAccent : Colors.grey.shade300,
-          foregroundColor: enabled ? Colors.white : Colors.black54,
+          foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),

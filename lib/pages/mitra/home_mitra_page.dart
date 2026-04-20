@@ -116,7 +116,7 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
                       title: context.watch<WalletProvider>().summary == null
                           ? "Rp 0"
                           : _rupiah(context.watch<WalletProvider>().summary!.totalNetEarned),
-                      subtitle: "Pendapatan hari ini",
+                      subtitle: "Pendapatan Mitra Cuci anda",
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -195,13 +195,16 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  color: Colors.blue.shade50,
+                  color: Colors.blueAccent,
+                  boxShadow: [
+                    BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                  ],
                 ),
                 child: const Center(
                   child: Text(
                     "📊 Grafik akan ditambahkan\n(Flutter Chart / Sync from backend)",
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.black54),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

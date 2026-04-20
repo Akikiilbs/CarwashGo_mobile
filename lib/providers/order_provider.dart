@@ -135,6 +135,7 @@ class OrderProvider extends ChangeNotifier {
     String? plateNumber,
     String? vehicleColor,
     required String address,
+    String? detailAddress,
     double? latitude,
     double? longitude,
     required String scheduledDate, // 'YYYY-MM-DD'
@@ -154,6 +155,7 @@ class OrderProvider extends ChangeNotifier {
         plateNumber: plateNumber,
         vehicleColor: vehicleColor,
         address: address,
+        detailAddress: detailAddress,
         latitude: latitude,
         longitude: longitude,
         scheduledDate: scheduledDate,
@@ -222,7 +224,7 @@ class OrderProvider extends ChangeNotifier {
       status: (o['status'] ?? '').toString(),
       image: 'assets/images/on1.png',
       location: (o['address'] ?? '').toString(),
-      detailAddress: '',
+      detailAddress: (o['detail_address'] ?? '').toString(),
 
       plateNumber: (o['plate_number'] ?? '').toString(),
       username: (customer?['name'] ?? '').toString(),
@@ -292,7 +294,7 @@ class OrderProvider extends ChangeNotifier {
       status: (o['status'] ?? '').toString(),
       image: 'assets/images/on1.png',
       location: (o['address'] ?? '').toString(),
-      detailAddress: '',
+      detailAddress: (o['detail_address'] ?? '').toString(),
       plateNumber: (o['plate_number'] ?? '').toString(),
       username: title,
       phoneNumber: (customer?['phone'] ?? '').toString(),

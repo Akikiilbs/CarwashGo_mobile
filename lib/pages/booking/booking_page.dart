@@ -260,8 +260,14 @@ class _BookingPageState extends State<BookingPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 width: double.infinity,
-                decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(10)),
-                child: Text("Alamat dipilih:\n$selectedAddress", style: const TextStyle(color: Colors.black87)),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent, 
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))
+                  ],
+                ),
+                child: Text("Alamat dipilih:\n$selectedAddress", style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
               ),
             ],
             const SizedBox(height: 20),
@@ -441,31 +447,37 @@ class _BookingPageState extends State<BookingPage> {
   Widget _buildPriceSection() {
     return Container(
       padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: Colors.blue.withOpacity(0.05), borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.blue.withOpacity(0.1))),
+      decoration: BoxDecoration(
+        color: Colors.blueAccent, 
+        borderRadius: BorderRadius.circular(16), 
+        boxShadow: [
+          BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+        ],
+      ),
       child: Column(
         children: [
-          _priceRow("Harga Layanan", getServicePrice()),
-          _priceRow("Biaya Antar", getDistancePrice(), suffix: " (${selectedDistance.toStringAsFixed(1)} km)"),
-          _priceRow("Pajak", tax),
-          if (discountPercent > 0) _priceRow("Diskon", discountPercent, suffix: "%"),
-          const Divider(height: 24),
-          _priceRow("Total Pembayaran", calculateTotal(), bold: true),
+          _priceRow("Harga Layanan", getServicePrice(), color: Colors.white),
+          _priceRow("Biaya Antar", getDistancePrice(), suffix: " (${selectedDistance.toStringAsFixed(1)} km)", color: Colors.white70),
+          _priceRow("Pajak", tax, color: Colors.white70),
+          if (discountPercent > 0) _priceRow("Diskon", discountPercent, suffix: "%", color: Colors.white70),
+          const Divider(height: 24, color: Colors.white38),
+          _priceRow("Total Pembayaran", calculateTotal(), bold: true, color: Colors.white),
           const SizedBox(height: 12),
-          Text("Driver ETA: ${estimateDriverArrival()}", style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black54)),
+          Text("Driver ETA: ${estimateDriverArrival()}", style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white70)),
         ],
       ),
     );
   }
 
-  Widget _priceRow(String title, int value, {bool bold = false, String suffix = ""}) {
+  Widget _priceRow(String title, int value, {bool bold = false, String suffix = "", Color color = Colors.black87}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title),
+          Text(title, style: TextStyle(color: color)),
           Text(suffix.isEmpty ? "Rp $value" : (suffix.startsWith(' ') ? "Rp $value$suffix" : "$value$suffix"), 
-               style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal)),
+               style: TextStyle(fontWeight: bold ? FontWeight.bold : FontWeight.normal, color: color)),
         ],
       ),
     );

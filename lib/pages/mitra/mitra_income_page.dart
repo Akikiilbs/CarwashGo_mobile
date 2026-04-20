@@ -346,7 +346,7 @@ Widget _actionBtn({required IconData icon, required String label, required VoidC
   );
 }
 
-Widget _historyList(BuildContext context, List<WalletTransaction> items) {
+Widget _historyList(BuildContext ctx, List<WalletTransaction> items) {
   if (items.isEmpty) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -413,7 +413,7 @@ Widget _historyList(BuildContext context, List<WalletTransaction> items) {
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: InkWell(
-                      onTap: () => _showProofDialog(context, tx.transferProof!),
+                      onTap: () => _showProofDialog(ctx, tx.transferProof!),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
@@ -448,10 +448,10 @@ Widget _historyList(BuildContext context, List<WalletTransaction> items) {
   );
 }
 
-void _showProofDialog(BuildContext context, String imageUrl) {
+void _showProofDialog(BuildContext ctx, String imageUrl) {
   showDialog(
-    context: context,
-    builder: (ctx) => Dialog(
+    context: ctx,
+    builder: (diagCtx) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -463,21 +463,21 @@ void _showProofDialog(BuildContext context, String imageUrl) {
             elevation: 0,
             automaticallyImplyLeading: false,
             actions: [
-              IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(Icons.close)),
+              IconButton(onPressed: () => Navigator.pop(diagCtx), icon: const Icon(Icons.close)),
             ],
           ),
           ConstrainedBox(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.7,
+              maxHeight: MediaQuery.of(ctx).size.height * 0.7,
             ),
             child: InteractiveViewer(
               child: Image.network(
                 imageUrl,
-                loadingBuilder: (context, child, loadingProgress) {
+                loadingBuilder: (imgCtx, child, loadingProgress) {
                   if (loadingProgress == null) return child;
                   return const Center(child: CircularProgressIndicator());
                 },
-                errorBuilder: (context, error, stackTrace) => const Padding(
+                errorBuilder: (imgCtx, error, stackTrace) => const Padding(
                   padding: EdgeInsets.all(20.0),
                   child: Text('Gagal memuat gambar bukti.'),
                 ),

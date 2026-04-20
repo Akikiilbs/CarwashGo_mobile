@@ -79,7 +79,8 @@ class _DetailServicePageState extends State<DetailServicePage> {
         vehicleBrand: widget.carType, // snapshot literal
         vehicleModel: "", 
         plateNumber: widget.plateNumber,
-        address: "${widget.address} (${widget.detailAddress})",
+        address: widget.address,
+        detailAddress: widget.detailAddress,
         latitude: widget.latitude,
         longitude: widget.longitude,
         scheduledDate: scheduledDate,
@@ -251,24 +252,30 @@ class _DetailServicePageState extends State<DetailServicePage> {
     return Container(
       padding: const EdgeInsets.all(14),
       margin: const EdgeInsets.only(top: 10, bottom: 10),
-      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(
+        color: Colors.blueAccent,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 3))
+        ],
+      ),
       child: Row(
         children: [
-          const Icon(Icons.location_on, color: Colors.blueAccent, size: 26),
+          const Icon(Icons.location_on, color: Colors.white, size: 26),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text("Alamat Lengkap", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                const Text("Alamat Lengkap", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                 const SizedBox(height: 5),
                 Text(
                   isCoord ? "Lokasi Maps: $mainAddress" : mainAddress,
-                  style: const TextStyle(fontSize: 14, color: Colors.black87),
+                  style: const TextStyle(fontSize: 14, color: Colors.white),
                 ),
                 if (detail.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text(detail, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                  Text(detail, style: const TextStyle(fontSize: 13, color: Colors.white70)),
                 ],
               ],
             ),

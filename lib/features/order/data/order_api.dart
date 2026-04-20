@@ -35,6 +35,7 @@ class OrderApi {
     String? plateNumber,
     String? vehicleColor,
     required String address,
+    String? detailAddress,
     double? latitude,
     double? longitude,
     required String scheduledDate, // 'YYYY-MM-DD'
@@ -55,6 +56,7 @@ class OrderApi {
           'plate_number': plateNumber,
           'vehicle_color': vehicleColor,
           'address': address,
+          'detail_address': detailAddress,
           'latitude': latitude,
           'longitude': longitude,
           'scheduled_date': scheduledDate,
