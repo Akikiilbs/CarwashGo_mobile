@@ -48,10 +48,16 @@ class _DetailStationPageState extends State<DetailStationPage> {
   final ImagePicker _picker = ImagePicker();
   XFile? _pickedImage;
 
+  List<String> _images = [];
+  int _currentImageIndex = 0;
+  double _rating = 4.9;
+
   @override
   void initState() {
     super.initState();
     _alamatController = TextEditingController(text: widget.location);
+    _images = [widget.image];
+    _rating = widget.rating > 0 ? widget.rating : 4.9;
     _descController = TextEditingController(text: widget.description ?? "");
     _jamController = TextEditingController(text: _formatHours(widget.operationalHours));
     _hargaController = TextEditingController(text: widget.price ?? "");
@@ -74,6 +80,14 @@ class _DetailStationPageState extends State<DetailStationPage> {
             // Update harga if min price is found
             final harga = p['harga']?.toString();
             if (harga != null) _hargaController.text = "Mulai dari Rp $harga";
+            
+            if (p['images'] != null && p['images'] is List && (p['images'] as List).isNotEmpty) {
+              _images = List<String>.from(p['images']);
+            }
+            if (p['rating'] != null) {
+              _rating = double.tryParse(p['rating'].toString()) ?? 4.9;
+            }
+            
             _loading = false;
           });
         }
@@ -223,32 +237,63 @@ class _DetailStationPageState extends State<DetailStationPage> {
                   width: double.infinity,
                   fit: BoxFit.cover,
                 )
-              : widget.image.startsWith('http')
-                  ? Image.network(
-                      widget.image,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
-                        height: 200,
-                        width: double.infinity,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image, color: Colors.grey, size: 50),
-                      ),
-                    )
-                  : Image.asset(
-                      widget.image,
-                      height: 200,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Container(
-                        height: 200,
-                        width: double.infinity,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image, color: Colors.grey, size: 50),
-                      ),
-                    ),
+              : SizedBox(
+                  height: 200,
+                  child: PageView.builder(
+                    onPageChanged: (idx) => setState(() => _currentImageIndex = idx),
+                    itemCount: _images.length,
+                    itemBuilder: (context, index) {
+                      final img = _images[index];
+                      return img.startsWith('http')
+                          ? Image.network(
+                              img,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (c, e, s) => Container(
+                                height: 200,
+                                width: double.infinity,
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.image, color: Colors.grey, size: 50),
+                              ),
+                            )
+                          : Image.asset(
+                              img,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (c, e, s) => Container(
+                                height: 200,
+                                width: double.infinity,
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.image, color: Colors.grey, size: 50),
+                              ),
+                            );
+                    },
+                  ),
+                ),
         ),
+        if (_images.length > 1 && _pickedImage == null)
+          Positioned(
+            bottom: 12,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                _images.length,
+                (index) => Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: _currentImageIndex == index ? 20 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _currentImageIndex == index ? Colors.blueAccent : Colors.white70,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
         Positioned(
           top: 10,
           left: 10,
@@ -305,10 +350,10 @@ class _DetailStationPageState extends State<DetailStationPage> {
           ),
           child: Row(
             children: [
-              const Icon(Icons.star, color: Colors.white, size: 16),
+              const Icon(Icons.star, color: Colors.amber, size: 16),
               const SizedBox(width: 4),
               Text(
-                widget.rating.toStringAsFixed(1),
+                _rating.toStringAsFixed(1),
                 style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
