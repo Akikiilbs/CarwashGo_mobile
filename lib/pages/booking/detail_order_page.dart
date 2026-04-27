@@ -7,8 +7,12 @@ import 'package:provider/provider.dart';
 import '../../core/network/dio_client.dart';
 import '../../models/order_model.dart';
 import '../../providers/order_provider.dart';
+import '../../providers/review_provider.dart';
+import '../menu/orders_tab.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DetailOrderPage extends StatefulWidget {
+  final Order? order;
   final String username;
   final String phoneNumber;
   final String bookingId;
@@ -39,6 +43,7 @@ class DetailOrderPage extends StatefulWidget {
 
   const DetailOrderPage({
     super.key,
+    this.order,
     required this.username,
     required this.phoneNumber,
     required this.bookingId,
@@ -67,6 +72,12 @@ class DetailOrderPage extends StatefulWidget {
 class _DetailOrderPageState extends State<DetailOrderPage> {
   final Dio _dio = DioClient().dio;
 
+  // Review state
+  int _rating = 5;
+  final TextEditingController _reviewController = TextEditingController();
+  bool _isSubmittingReview = false;
+  bool _reviewSubmitted = false;
+
   LatLng? _partnerLatLng;
   String? _resolvedCustomerAddress;
 
@@ -79,8 +90,19 @@ class _DetailOrderPageState extends State<DetailOrderPage> {
   @override
   void initState() {
     super.initState();
+    _checkIfReviewed();
     _loadPartnerLocation();
     _resolveCustomerAddressIfNeeded();
+  }
+
+  Future<void> _checkIfReviewed() async {
+    if (widget.order != null && widget.order!.status == 'completed') {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList('reviewed_orders') ?? [];
+      if (list.contains(widget.order!.bookingId)) {
+        if (mounted) setState(() => _reviewSubmitted = true);
+      }
+    }
   }
 
   // =========================
@@ -248,75 +270,217 @@ class _DetailOrderPageState extends State<DetailOrderPage> {
                       ),
                     ),
                   if (widget.showDelete) const SizedBox(width: 10),
-                  Expanded(
-                    child: SizedBox(
-                      height: 45,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (widget.fromOrderPage) {
-                            Navigator.pop(context);
-                            return;
-                          }
+                  if (widget.showDelete || (!widget.showDelete && widget.order == null))
+                    Expanded(
+                      child: SizedBox(
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (widget.fromOrderPage) {
+                              Navigator.pop(context);
+                              return;
+                            }
 
-                          final newOrder = Order(
-                            mitraId: "mitra",
-                            title: widget.username,
-                            date: widget.date,
-                            time: widget.time,
-                            status: "Pesanan Baru",
-                            image: "assets/images/on1.png",
-                            location: widget.address,
-                            detailAddress: widget.detailAddress,
-                            plateNumber: widget.plateNumber,
-                            username: widget.username,
-                            phoneNumber: widget.phoneNumber,
-                            bookingId: widget.bookingId,
-                            carType: widget.carType,
-                            price: widget.price,
-                            servicePrice: widget.servicePrice,
-                            tax: widget.tax,
-                            discount: widget.discount,
-                            total: widget.total,
-                          );
+                            final newOrder = Order(
+                              mitraId: "mitra",
+                              title: widget.username,
+                              date: widget.date,
+                              time: widget.time,
+                              status: "Pesanan Baru",
+                              image: "assets/images/on1.png",
+                              location: widget.address,
+                              detailAddress: widget.detailAddress,
+                              plateNumber: widget.plateNumber,
+                              username: widget.username,
+                              phoneNumber: widget.phoneNumber,
+                              bookingId: widget.bookingId,
+                              carType: widget.carType,
+                              price: widget.price,
+                              servicePrice: widget.servicePrice,
+                              tax: widget.tax,
+                              discount: widget.discount,
+                              total: widget.total,
+                            );
 
-                          orderProvider.addOrder(newOrder);
+                            orderProvider.addOrder(newOrder);
 
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Pesanan dibuat'),
-                              content: const Text(
-                                  'Silahkan tunggu pesanan anda diterima oleh mitra!'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    Navigator.pop(context);
-                                  },
-                                  child: const Text('OK'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueAccent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: const Text(
-                          "CONFIRM",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              fontSize: 15),
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (_) => AlertDialog(
+                                title: const Text('Pesanan dibuat'),
+                                content: const Text(
+                                    'Silahkan tunggu pesanan anda diterima oleh mitra!'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(context);
+                                      Navigator.pop(context);
+                                    },
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text(
+                            "CONFIRM",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontSize: 15),
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
-              )
+              ),
+              
+              if (widget.order != null && 
+                  widget.order!.status == 'accepted' && 
+                  widget.order!.paymentStatus != 'paid' && 
+                  widget.order!.paymentStatus != 'settlement' && 
+                  widget.order!.paymentStatus != 'pending_verification') ...[
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (context) => ManualQRISBottomSheet(order: widget.order),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text(
+                      "BAYAR SEKARANG",
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16),
+                    ),
+                  ),
+                ),
+              ],
+
+              if (widget.order != null && widget.order!.status == 'completed') ...[
+                const SizedBox(height: 20),
+                const Divider(),
+                const SizedBox(height: 10),
+                const Text("Berikan Ulasan Anda", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 10),
+                if (_reviewSubmitted)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        SizedBox(width: 8),
+                        Expanded(child: Text("Terima kasih atas ulasan Anda!", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))),
+                      ],
+                    ),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(5, (index) {
+                          return IconButton(
+                            icon: Icon(
+                              index < _rating ? Icons.star : Icons.star_border,
+                              color: Colors.amber,
+                              size: 32,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _rating = index + 1;
+                              });
+                            },
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _reviewController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: "Tuliskan pengalaman Anda...",
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 45,
+                        child: ElevatedButton(
+                          onPressed: _isSubmittingReview ? null : () async {
+                            if (_reviewController.text.trim().isEmpty) {
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ulasan tidak boleh kosong')));
+                              return;
+                            }
+                            setState(() => _isSubmittingReview = true);
+                            try {
+                              final int? orderIdVal = int.tryParse(widget.order!.bookingId);
+                              if (orderIdVal != null) {
+                                await context.read<ReviewProvider>().submitReview(orderIdVal, _rating, _reviewController.text.trim());
+                                setState(() {
+                                  _reviewSubmitted = true;
+                                });
+                                final prefs = await SharedPreferences.getInstance();
+                                final list = prefs.getStringList('reviewed_orders') ?? [];
+                                if (!list.contains(widget.order!.bookingId)) {
+                                  list.add(widget.order!.bookingId);
+                                  await prefs.setStringList('reviewed_orders', list);
+                                }
+                              }
+                            } on DioException catch (e) {
+                              String msg = 'Terjadi kesalahan jaringan';
+                              if (e.response != null && e.response!.data is Map && e.response!.data['message'] != null) {
+                                msg = e.response!.data['message'];
+                                if (msg.toLowerCase().contains('sudah memberikan review')) {
+                                  setState(() => _reviewSubmitted = true);
+                                  msg = 'Anda sudah memberikan review untuk pesanan ini sebelumnya.';
+                                  
+                                  // mark local
+                                  final prefs = await SharedPreferences.getInstance();
+                                  final list = prefs.getStringList('reviewed_orders') ?? [];
+                                  if (!list.contains(widget.order!.bookingId)) {
+                                    list.add(widget.order!.bookingId);
+                                    await prefs.setStringList('reviewed_orders', list);
+                                  }
+                                }
+                              }
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengirim ulasan: $e')));
+                            } finally {
+                              setState(() => _isSubmittingReview = false);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: _isSubmittingReview 
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text("Kirim Ulasan", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ],
           ),
         ),

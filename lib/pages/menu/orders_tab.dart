@@ -77,7 +77,7 @@ class _OrdersTabState extends State<OrdersTab> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _ManualQRISBottomSheet(order: order),
+      builder: (context) => ManualQRISBottomSheet(order: order),
     );
   }
 
@@ -115,61 +115,7 @@ class _OrdersTabState extends State<OrdersTab> {
   Widget build(BuildContext context) {
     final orders = context.watch<OrderProvider>().orders;
 
-    // POPUP REVIEW
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (_popupShown) return;
-      try {
-        final selesaiOrder = orders.firstWhere(
-          (o) {
-             if (o.status != "completed" || _reviewedOrderIds.contains(o.bookingId)) return false;
-             
-             try {
-                final orderDate = DateTime.parse('${o.date} 00:00:00');
-                if (DateTime.now().difference(orderDate).inDays > 3) return false;
-             } catch(_) {}
-             return true;
-          },
-        );
-        await Future.delayed(const Duration(milliseconds: 300));
-        if (!mounted) return;
-        _popupShown = true;
-
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => ReviewPopup(mitraName: selesaiOrder.title),
-        ).then((result) async {
-          if (result != null) {
-            final int rating = result["rating"];
-            final String review = result["review"];
-            final int? orderIdVal = int.tryParse(selesaiOrder.bookingId);
-            
-            if (orderIdVal != null) {
-              try {
-                await context.read<ReviewProvider>().submitReview(orderIdVal, rating, review);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Terima kasih, ulasan Anda berhasil dikirim!')));
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal mengirim ulasan: ${e.toString().replaceAll('Exception: ', '')}')));
-                }
-              }
-            }
-
-            if (mounted) {
-              _markAsDismissedOrReviewed(selesaiOrder.bookingId);
-            }
-          } else {
-            if (mounted) {
-              _markAsDismissedOrReviewed(selesaiOrder.bookingId);
-            }
-          }
-        });
-      } catch (_) {
-        _popupShown = false;
-      }
-    });
+    // POPUP REVIEW removed and moved to detail_order_page.dart
 
     if (orders.isEmpty) {
       return Center(
@@ -235,6 +181,7 @@ class _OrdersTabState extends State<OrdersTab> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => DetailOrderPage(
+                      order: order,
                       username: order.username,
                       phoneNumber: order.phoneNumber,
                       bookingId: order.bookingId,
@@ -337,15 +284,15 @@ class _OrdersTabState extends State<OrdersTab> {
 
 // ===================== WIDGET BOTTOM SHEET MANUAL QRIS =====================
 
-class _ManualQRISBottomSheet extends StatefulWidget {
+class ManualQRISBottomSheet extends StatefulWidget {
   final dynamic order;
-  const _ManualQRISBottomSheet({required this.order});
+  const ManualQRISBottomSheet({super.key, required this.order});
 
   @override
-  State<_ManualQRISBottomSheet> createState() => _ManualQRISBottomSheetState();
+  State<ManualQRISBottomSheet> createState() => _ManualQRISBottomSheetState();
 }
 
-class _ManualQRISBottomSheetState extends State<_ManualQRISBottomSheet> {
+class _ManualQRISBottomSheetState extends State<ManualQRISBottomSheet> {
   File? _image;
   bool _isUploading = false;
 

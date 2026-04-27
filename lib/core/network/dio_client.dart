@@ -12,7 +12,7 @@ class DioClient {
     dio = Dio(
       BaseOptions(
         baseUrl:
-            'https://6054-202-43-231-141.ngrok-free.app/api/v1',
+            'https://c4d1-27-112-70-186.ngrok-free.app/api/v1',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         headers: {

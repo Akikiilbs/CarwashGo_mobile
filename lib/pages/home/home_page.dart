@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     Consumer<NotificationProvider>(
                       builder: (context, notifProv, child) {
-                        final hasUnread = notifProv.notifications.any((n) => n.isNew == true);
+                        final hasUnread = notifProv.getCustomerUnreadCount() > 0;
                         return Stack(
                           children: [
                             IconButton(

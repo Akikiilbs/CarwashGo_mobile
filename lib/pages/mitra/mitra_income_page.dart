@@ -66,11 +66,6 @@ class _MitraIncomePageState extends State<MitraIncomePage> {
             ),
             const SizedBox(height: 10),
             _historyList(context, prov.transactions),
-            const SizedBox(height: 6),
-            const Text(
-              'Tarik saldo otomatis: saat order selesai dan pembayaran valid, sistem akan membuat pendapatan mitra dan (opsional) menjalankan payout instan via IRIS.',
-              style: TextStyle(color: Colors.black54, fontSize: 12),
-            ),
           ],
         ),
       ),
