@@ -114,11 +114,10 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 10),
 
-                // 🔙 Back Button → ke halaman role
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_back_ios_new_rounded,
-                    color: Colors.blueAccent,
+                    color: Theme.of(context).primaryColor,
                   ),
                   onPressed: () =>
                       Navigator.pushReplacementNamed(context, '/role'),
@@ -241,11 +240,11 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () {
                       Navigator.pushNamed(context, '/forgot-password');
                     },
-                    child: const Text(
+                    child: Text(
                       "Lupa kata sandi?",
                       style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).primaryColor,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -253,17 +252,10 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 30),
 
-                // ⭐ Login Button
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
                     onPressed: _isLoading ? null : _handleLogin,
                     child: _isLoading
                         ? const SizedBox(
@@ -275,14 +267,7 @@ class _LoginPageState extends State<LoginPage> {
                                   AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text(
-                            "MASUK",
-                            style: TextStyle(
-                              fontSize: 17,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        : const Text("MASUK"),
                   ),
                 ),
 
@@ -297,10 +282,10 @@ class _LoginPageState extends State<LoginPage> {
                       onTap: () {
                         Navigator.pushNamed(context, '/signup');
                       },
-                      child: const Text(
+                      child: Text(
                         "Daftar sekarang",
                         style: TextStyle(
-                          color: Colors.blueAccent,
+                          color: Theme.of(context).primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

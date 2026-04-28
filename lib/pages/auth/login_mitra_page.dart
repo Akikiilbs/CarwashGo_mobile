@@ -121,8 +121,8 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    color: Colors.blueAccent),
+                icon: Icon(Icons.arrow_back_ios_new,
+                    color: Theme.of(context).primaryColor),
                 onPressed: _goToRole,
               ),
               const SizedBox(height: 10),
@@ -144,13 +144,13 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              const Center(
+              Center(
                 child: Text(
                   "Selamat Datang",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 26,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blueAccent,
+                    color: Theme.of(context).primaryColor,
                   ),
                 ),
               ),
@@ -170,31 +170,27 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                 const SizedBox(height: 8),
               ],
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 "Alamat Email",
                 style: TextStyle(
-                  color: Colors.blueAccent,
+                  color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: "Masukkan alamat email anda",
-                  prefixIcon: const Icon(Icons.email_outlined,
-                      color: Colors.blueAccent),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 "Kata Sandi",
                 style: TextStyle(
-                  color: Colors.blueAccent,
+                  color: Theme.of(context).primaryColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -204,17 +200,13 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                 obscureText: _isObscure,
                 decoration: InputDecoration(
                   hintText: "Masukkan kata sandi anda",
-                  prefixIcon:
-                      const Icon(Icons.lock_outline, color: Colors.blueAccent),
+                  prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _isObscure ? Icons.visibility_off : Icons.visibility,
                       color: Colors.grey,
                     ),
                     onPressed: () => setState(() => _isObscure = !_isObscure),
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
               ),
@@ -225,11 +217,11 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                   onTap: () {
                     Navigator.pushNamed(context, '/forgot-password-mitra');
                   },
-                  child: const Text(
+                  child: Text(
                     "Lupa kata sandi?",
                     style: TextStyle(
-                      color: Colors.blueAccent,
-                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).primaryColor,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -239,12 +231,6 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
                   onPressed: _isLoading ? null : _login,
                   child: _isLoading
                       ? const SizedBox(
@@ -256,13 +242,7 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                                 AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
-                          "MASUK",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                      : const Text("MASUK"),
                 ),
               ),
               const SizedBox(height: 25),
@@ -274,10 +254,10 @@ class _LoginMitraPageState extends State<LoginMitraPage> {
                     onTap: () {
                       Navigator.pushReplacementNamed(context, '/signup-mitra');
                     },
-                    child: const Text(
+                    child: Text(
                       "Daftar",
                       style: TextStyle(
-                        color: Colors.blueAccent,
+                        color: Theme.of(context).primaryColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

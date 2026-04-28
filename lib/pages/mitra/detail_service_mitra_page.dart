@@ -231,7 +231,23 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
           // =========================
           Row(
             children: [
-              const Icon(Icons.person, color: Colors.blueAccent, size: 28),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.blueAccent.withOpacity(0.1),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: (o.profilePicture != null && o.profilePicture!.isNotEmpty)
+                    ? Image.network(
+                        o.profilePicture!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.person, color: Colors.blueAccent),
+                      )
+                    : const Icon(Icons.person, color: Colors.blueAccent),
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -483,12 +499,21 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                 await prov.loadPartnerOrders();
               },
         style: ElevatedButton.styleFrom(
-          backgroundColor: enabled ? Colors.blueAccent : Colors.grey.shade300,
+          backgroundColor: Colors.blueAccent,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: Colors.grey.shade300,
+          disabledForegroundColor: Colors.grey.shade700,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+            color: enabled ? Colors.white : Colors.grey.shade700,
+          ),
+        ),
       ),
     );
   }

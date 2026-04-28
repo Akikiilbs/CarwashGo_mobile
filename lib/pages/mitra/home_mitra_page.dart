@@ -181,7 +181,7 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
               const SizedBox(height: 25),
 
               const Text(
-                "Grafik Pendapatan",
+                "Grafik Jumlah Pesanan",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w800,
@@ -190,24 +190,7 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
 
               const SizedBox(height: 10),
 
-              Container(
-                height: 240,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  color: Colors.blueAccent,
-                  boxShadow: [
-                    BoxShadow(color: Colors.blueAccent.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    "📊 Grafik akan ditambahkan\n(Flutter Chart / Sync from backend)",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
+              const OrderChartWidget(),
 
               const SizedBox(height: 25),
 
@@ -242,11 +225,12 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
                     children: recentOrders.map((o) {
                       Color c;
                       switch (o.status) {
-                        case 'completed': c = Colors.green; break;
-                        case 'pending': c = Colors.grey; break;
+                        case 'completed': c = Colors.green.shade600; break;
+                        case 'pending': c = Colors.orange.shade600; break;
                         case 'rejected':
-                        case 'cancelled': c = Colors.red; break;
-                        default: c = Colors.orange;
+                        case 'cancelled': c = Colors.red.shade600; break;
+                        case 'accepted': c = Colors.blue.shade600; break;
+                        default: c = Colors.grey.shade700;
                       }
 
                       String statusText = o.status == 'pending' ? 'Menunggu' :
@@ -260,6 +244,7 @@ class _HomeMitraPageState extends State<HomeMitraPage> {
                         o.carType,
                         statusText,
                         c,
+                        profilePicture: o.profilePicture,
                         onTap: () {
                           Navigator.push(
                             context,
@@ -300,17 +285,25 @@ Widget _infoCard({
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 5),
           )
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 30, color: color),
-          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 28, color: color),
+          ),
+          const SizedBox(height: 12),
           Text(
             title,
             style: const TextStyle(
@@ -339,6 +332,7 @@ Widget _bookingCard(
   String status,
   Color color, {
   VoidCallback? onTap,
+  String? profilePicture,
 }) {
   return GestureDetector(
     onTap: onTap,
@@ -350,35 +344,65 @@ Widget _bookingCard(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 5),
           )
         ],
       ),
       child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Row(
           children: [
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
+              clipBehavior: Clip.hardEdge,
+              child: (profilePicture != null && profilePicture.isNotEmpty)
+                  ? Image.network(
+                      profilePicture,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          Icon(Icons.person, color: color),
+                    )
+                  : Icon(Icons.person, color: color),
             ),
-            const SizedBox(height: 4),
-            Text(service, style: const TextStyle(color: Colors.black54)),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(service, style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
           ],
         ),
-        Text(
-          status,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: color,
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            status,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ),
       ],
@@ -395,4 +419,169 @@ String _rupiah(int value) {
     chunks.add(rev.skip(i).take(3).toList().reversed.join());
   }
   return 'Rp ${chunks.reversed.join('.')}' ;
+}
+
+// ================= CHART WIDGET DENGAN FILTER =================
+class OrderChartWidget extends StatefulWidget {
+  const OrderChartWidget({super.key});
+
+  @override
+  State<OrderChartWidget> createState() => _OrderChartWidgetState();
+}
+
+class _OrderChartWidgetState extends State<OrderChartWidget> {
+  int _selectedDays = 7;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<OrderProvider>(
+      builder: (context, orderProv, _) {
+        final orders = orderProv.orders;
+
+        final now = DateTime.now();
+        final List<Map<String, dynamic>> chartData = [];
+        int maxCount = 0;
+
+        for (int i = _selectedDays - 1; i >= 0; i--) {
+          final date = now.subtract(Duration(days: i));
+          final dateString = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+          String label;
+          if (_selectedDays <= 7) {
+            label = _getDayName(date.weekday);
+          } else {
+            label = "${date.day}/${date.month}";
+          }
+
+          final count = orders.where((o) {
+            if (o.date.isEmpty) return false;
+            return o.date.startsWith(dateString);
+          }).length;
+
+          if (count > maxCount) maxCount = count;
+
+          chartData.add({
+            'label': label,
+            'count': count,
+          });
+        }
+
+        if (maxCount == 0) maxCount = 1;
+
+        return Container(
+          height: 260,
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 5),
+              )
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "$_selectedDays Hari Terakhir",
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black54),
+                  ),
+                  DropdownButton<int>(
+                    value: _selectedDays,
+                    icon: const Icon(Icons.arrow_drop_down, color: Colors.blueAccent),
+                    underline: const SizedBox(),
+                    style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold),
+                    onChanged: (int? newValue) {
+                      if (newValue != null) {
+                        setState(() {
+                          _selectedDays = newValue;
+                        });
+                      }
+                    },
+                    items: const [
+                      DropdownMenuItem(value: 7, child: Text("7 Hari")),
+                      DropdownMenuItem(value: 14, child: Text("14 Hari")),
+                      DropdownMenuItem(value: 30, child: Text("1 Bulan")),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true, // starts from right (most recent)
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: chartData.map((data) {
+                      final double heightFactor = data['count'] / maxCount;
+                      // Lebar bar disesuaikan agar tidak terlalu padat
+                      double barWidth = _selectedDays == 7 ? 30 : (_selectedDays == 14 ? 20 : 12);
+                      double marginWidth = _selectedDays == 7 ? 10 : 6;
+
+                      return Container(
+                        margin: EdgeInsets.symmetric(horizontal: marginWidth),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              data['count'].toString(),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                                color: data['count'] > 0 ? Colors.blueAccent : Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Flexible(
+                              child: FractionallySizedBox(
+                                heightFactor: heightFactor > 0 ? heightFactor : 0.05,
+                                child: Container(
+                                  width: barWidth,
+                                  decoration: BoxDecoration(
+                                    color: data['count'] > 0 ? Colors.blueAccent : Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              data['label'],
+                              style: const TextStyle(fontSize: 10, color: Colors.black54),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'Sen';
+      case 2: return 'Sel';
+      case 3: return 'Rab';
+      case 4: return 'Kam';
+      case 5: return 'Jum';
+      case 6: return 'Sab';
+      case 7: return 'Min';
+      default: return '';
+    }
+  }
 }

@@ -245,6 +245,7 @@ class OrderProvider extends ChangeNotifier {
       total: totalAmount,
       notes: (o['notes'] ?? '').toString(),
       paymentProof: o['payment_proof']?.toString(),
+      profilePicture: customer?['profile_photo_url']?.toString(),
     );
   }
 
@@ -322,6 +323,7 @@ class OrderProvider extends ChangeNotifier {
       total: totalAmount,
       notes: (o['notes'] ?? '').toString(),
       paymentProof: o['payment_proof']?.toString(),
+      profilePicture: customer?['profile_photo_url']?.toString(),
     );
   }
 

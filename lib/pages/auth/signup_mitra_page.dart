@@ -348,12 +348,13 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Daftar Mitra"),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
+          icon: Icon(Icons.arrow_back_ios_new, color: Theme.of(context).primaryColor),
           onPressed: _goBackToLogin,
         ),
       ),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -369,7 +370,7 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   "Foto Outlet",
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(height: 8),
@@ -413,49 +414,39 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
 
               const SizedBox(height: 16),
 
-              // ================= NAMA PEMILIK =================
+              Text("Nama Pemilik Usaha", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: "Nama Pemilik Usaha",
-                  prefixIcon: const Icon(Icons.person),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                decoration: const InputDecoration(
+                  hintText: "Nama Pemilik Usaha",
+                  prefixIcon: Icon(Icons.person),
                 ),
               ),
               const SizedBox(height: 12),
 
-              // ================= NAMA USAHA =================
+              Text("Nama Usaha", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               TextField(
                 controller: _businessNameController,
-                decoration: InputDecoration(
-                  labelText: "Nama Usaha",
-                  prefixIcon: const Icon(Icons.store_mall_directory_outlined),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                decoration: const InputDecoration(
+                  hintText: "Nama Usaha",
+                  prefixIcon: Icon(Icons.store_mall_directory_outlined),
                 ),
               ),
               const SizedBox(height: 12),
 
-              // ================= ALAMAT + LOKASI (DIGABUNG) =================
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Alamat Outlet",
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+              Text(
+                "Alamat Outlet",
+                style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _addressController,
                 maxLines: 2,
                 decoration: InputDecoration(
-                  labelText: "Alamat Usaha",
-                  alignLabelWithHint: true,
+                  hintText: "Alamat Usaha",
                   prefixIcon: const Icon(Icons.location_on_outlined),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  hintText: "Pilih lokasi dari map / gunakan lokasi saat ini",
                   suffixIcon: Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: Row(
@@ -508,56 +499,54 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
 
               const SizedBox(height: 12),
 
-              // ================= EMAIL =================
+              Text("Email", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
-                decoration: InputDecoration(
-                  labelText: "Email",
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                decoration: const InputDecoration(
+                  hintText: "Email",
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 12),
 
-              // ================= NOMOR HP =================
+              Text("Nomor HP", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               TextField(
                 controller: _phoneController,
-                decoration: InputDecoration(
-                  labelText: "Nomor HP",
-                  prefixIcon: const Icon(Icons.phone),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
+                decoration: const InputDecoration(
+                  hintText: "Nomor HP",
+                  prefixIcon: Icon(Icons.phone),
                 ),
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 12),
 
-              // ================= PASSWORD =================
+              Text("Kata Sandi", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               TextField(
                 controller: _passwordController,
                 obscureText: _isObscure,
                 decoration: InputDecoration(
-                  labelText: "Kata Sandi",
+                  hintText: "Kata Sandi",
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(
                         _isObscure ? Icons.visibility_off : Icons.visibility),
                     onPressed: () => setState(() => _isObscure = !_isObscure),
                   ),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
               const SizedBox(height: 12),
 
-              // ================= KONFIRMASI PASSWORD =================
+              Text("Konfirmasi Kata Sandi", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
               TextField(
                 controller: _confirmController,
                 obscureText: _isObscureConfirm,
                 decoration: InputDecoration(
-                  labelText: "Konfirmasi Kata Sandi",
+                  hintText: "Konfirmasi Kata Sandi",
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
                     icon: Icon(_isObscureConfirm
@@ -566,25 +555,16 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
                     onPressed: () =>
                         setState(() => _isObscureConfirm = !_isObscureConfirm),
                   ),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10)),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              // ================= BUTTON DAFTAR =================
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _register,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
                   child: _isLoading
                       ? const SizedBox(
                           width: 22,
@@ -595,11 +575,7 @@ class _SignupMitraPageState extends State<SignupMitraPage> {
                                 AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text(
-                          "DAFTAR",
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
+                      : const Text("DAFTAR"),
                 ),
               ),
               const SizedBox(height: 12),

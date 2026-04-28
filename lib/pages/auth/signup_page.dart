@@ -284,13 +284,13 @@ class _SignUpPageState extends State<SignUpPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 10),
-                const Center(
+                Center(
                   child: Text(
                     "Buat Akun Baru",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blueAccent,
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                 ),
@@ -310,12 +310,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 20),
 
-                // NAMA LENGKAP
-                const Text("Nama Lengkap"),
+                Text("Nama Lengkap", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
+                    hintText: "Masukkan nama lengkap",
                   ),
                   validator: (value) => value == null || value.isEmpty
                       ? "Masukkan nama lengkap"
@@ -324,14 +324,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 20),
 
-                // NOMOR TELEPON
-                const Text("Nomor Telepon"),
+                Text("Nomor Telepon", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.phone_iphone),
-                    border: OutlineInputBorder(),
+                    hintText: "Masukkan nomor telepon",
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty)
@@ -344,14 +344,14 @@ class _SignUpPageState extends State<SignUpPage> {
                 const SizedBox(height: 20),
 
                 // ✅ ALAMAT + LOKASI (DIGABUNG)
-                const Text("Alamat "),
+                Text("Alamat ", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _addressController,
                   keyboardType: TextInputType.streetAddress,
                   maxLines: 2,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.location_on_outlined),
-                    border: const OutlineInputBorder(),
                     hintText: "Pilih lokasi dari map / gunakan lokasi saat ini",
                     suffixIcon: Padding(
                       padding: const EdgeInsets.only(right: 6),
@@ -412,14 +412,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 20),
 
-                // EMAIL
-                const Text("Alamat Email"),
+                Text("Alamat Email", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(),
+                    hintText: "Masukkan email",
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) return "Masukkan email";
@@ -430,13 +430,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 20),
 
-                // PASSWORD
-                const Text("Kata Sandi"),
+                Text("Kata Sandi", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _isObscure,
                   decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
+                    hintText: "Masukkan kata sandi",
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(
                           _isObscure ? Icons.visibility_off : Icons.visibility),
@@ -452,13 +453,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 20),
 
-                // KONFIRMASI PASSWORD
-                const Text("Konfirmasi Kata Sandi"),
+                Text("Konfirmasi Kata Sandi", style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 8),
                 TextFormField(
                   controller: _confirmController,
                   obscureText: _isObscureConfirm,
                   decoration: InputDecoration(
-                    border: const OutlineInputBorder(),
+                    hintText: "Konfirmasi kata sandi",
+                    prefixIcon: const Icon(Icons.lock_outline),
                     suffixIcon: IconButton(
                       icon: Icon(_isObscureConfirm
                           ? Icons.visibility_off
@@ -476,16 +478,10 @@ class _SignUpPageState extends State<SignUpPage> {
 
                 const SizedBox(height: 30),
 
-                // TOMBOL DAFTAR
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
                     onPressed: _isLoading ? null : _submit,
                     child: _isLoading
                         ? const SizedBox(
@@ -497,14 +493,7 @@ class _SignUpPageState extends State<SignUpPage> {
                                   AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text(
-                            "Daftar",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        : const Text("DAFTAR"),
                   ),
                 ),
 
@@ -523,10 +512,10 @@ class _SignUpPageState extends State<SignUpPage> {
                           (route) => false,
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         "Masuk",
                         style: TextStyle(
-                          color: Colors.blueAccent,
+                          color: Theme.of(context).primaryColor,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

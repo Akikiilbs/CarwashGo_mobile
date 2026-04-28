@@ -191,9 +191,10 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 5),
               )
             ],
           ),
@@ -202,8 +203,24 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.person, color: Colors.blueAccent),
-                  const SizedBox(width: 8),
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    clipBehavior: Clip.hardEdge,
+                    child: (o.profilePicture != null && o.profilePicture!.isNotEmpty)
+                        ? Image.network(
+                            o.profilePicture!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(Icons.person, color: Theme.of(context).primaryColor),
+                          )
+                        : Icon(Icons.person, color: Theme.of(context).primaryColor),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       o.title,
@@ -323,16 +340,33 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black12.withOpacity(0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 15,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 5),
                 )
               ],
             ),
             child: Row(
               children: [
-                const Icon(Icons.local_car_wash, color: Colors.blueAccent),
-                const SizedBox(width: 10),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: (o.profilePicture != null && o.profilePicture!.isNotEmpty)
+                      ? Image.network(
+                          o.profilePicture!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              Icon(Icons.person, color: Theme.of(context).primaryColor),
+                        )
+                      : Icon(Icons.person, color: Theme.of(context).primaryColor),
+                ),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

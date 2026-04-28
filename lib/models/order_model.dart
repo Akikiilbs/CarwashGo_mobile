@@ -29,6 +29,7 @@ class Order {
   final int total;
   final String notes;
   final String? paymentProof;
+  final String? profilePicture;
 
   Order({
     this.mitraId,
@@ -55,6 +56,7 @@ class Order {
     required this.total,
     this.notes = '',
     this.paymentProof,
+    this.profilePicture,
   });
 
   Order copyWith({
@@ -82,6 +84,7 @@ class Order {
     int? total,
     String? notes,
     String? paymentProof,
+    String? profilePicture,
   }) {
     return Order(
       mitraId: mitraId ?? this.mitraId,
@@ -108,6 +111,7 @@ class Order {
       total: total ?? this.total,
       notes: notes ?? this.notes,
       paymentProof: paymentProof ?? this.paymentProof,
+      profilePicture: profilePicture ?? this.profilePicture,
     );
   }
 }

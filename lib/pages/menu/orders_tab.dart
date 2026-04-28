@@ -209,10 +209,15 @@ class _OrdersTabState extends State<OrdersTab> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEAF3FF),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: Colors.black12.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 15,
+                      spreadRadius: 2,
+                      offset: const Offset(0, 5),
+                    )
                   ]
                 ),
                 child: Row(
@@ -220,8 +225,11 @@ class _OrdersTabState extends State<OrdersTab> {
                     Container(
                       width: 55,
                       height: 55,
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                      child: const Icon(Icons.local_car_wash, color: Colors.blue),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Icon(Icons.local_car_wash, color: Theme.of(context).primaryColor),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -242,13 +250,10 @@ class _OrdersTabState extends State<OrdersTab> {
                         Container(
                           padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 10),
                           decoration: BoxDecoration(
-                            color: statusColor, 
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(color: statusColor.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))
-                            ],
+                            color: statusColor.withOpacity(0.1), 
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(statusText, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
+                          child: Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 11)),
                         ),
                         const SizedBox(height: 6),
                         _paymentBadge(order.paymentStatus ?? 'unpaid'),

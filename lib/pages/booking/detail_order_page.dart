@@ -188,16 +188,16 @@ class _DetailOrderPageState extends State<DetailOrderPage> {
     final orderProvider = context.read<OrderProvider>();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE5F1FF),
+      backgroundColor: const Color(0xFFF1F5F9), // Slate 100
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE5F1FF),
+        backgroundColor: const Color(0xFFF1F5F9),
         elevation: 0,
         centerTitle: true,
-        title: const Text(
+        title: Text(
           "Detail Service",
           style: TextStyle(
             fontWeight: FontWeight.bold,
-            color: Colors.blueAccent,
+            color: Theme.of(context).primaryColor,
           ),
         ),
         leading: IconButton(
@@ -213,12 +213,13 @@ class _DetailOrderPageState extends State<DetailOrderPage> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.black12.withOpacity(0.1),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 15,
+                spreadRadius: 2,
+                offset: const Offset(0, 5),
               )
             ],
           ),

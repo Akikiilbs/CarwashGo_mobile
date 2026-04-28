@@ -177,12 +177,19 @@ class _HomePageState extends State<HomePage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF64B5F6), Color(0xFF1976D2)],
+        gradient: LinearGradient(
+          colors: [Theme.of(context).primaryColor.withOpacity(0.85), Theme.of(context).primaryColor],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).primaryColor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -237,12 +244,13 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 15,
+            spreadRadius: 2,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -296,10 +304,10 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.location_on_rounded,
                       size: 15,
-                      color: Colors.blueAccent,
+                      color: Theme.of(context).primaryColor,
                     ),
                     const SizedBox(width: 4),
                     Expanded(
@@ -320,18 +328,31 @@ class _HomePageState extends State<HomePage> {
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
-                    Text(
-                      station.rating.toStringAsFixed(1),
-                      style: const TextStyle(fontSize: 13),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            station.rating.toStringAsFixed(1),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87),
+                          ),
+                        ],
+                      ),
                     ),
                     if (station.harga.isNotEmpty)
                       Text(
                         "Rp ${station.harga}",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blueAccent,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).primaryColor,
                         ),
                       ),
                     if (station.distanceKm != null)
@@ -339,7 +360,8 @@ class _HomePageState extends State<HomePage> {
                         "${station.distanceKm!.toStringAsFixed(1)} km",
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Colors.grey,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                   ],

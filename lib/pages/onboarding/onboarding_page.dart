@@ -55,12 +55,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             await AppPrefs.setOnboardingDone();
                             if (context.mounted) Navigator.pushNamed(context, '/role');
                           },
-                          child: const Text(
+                          child: Text(
                             "Lewati",
                             style: TextStyle(
-                              color: Colors.blueAccent,
+                              color: Theme.of(context).primaryColor,
                               fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                              fontSize: 15,
                             ),
                           ),
                         ),
@@ -87,10 +87,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                 Text(
                                   item["title"]!,
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blueAccent,
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w800,
+                                    color: Theme.of(context).primaryColor,
                                   ),
                                 ),
                                 const SizedBox(height: 10),
@@ -101,7 +101,8 @@ class _OnboardingPageState extends State<OnboardingPage> {
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                       fontSize: 15,
-                                      color: Colors.black87,
+                                      color: Colors.black54,
+                                      height: 1.5,
                                     ),
                                   ),
                                 ),
@@ -124,7 +125,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                             height: 8,
                             decoration: BoxDecoration(
                               color: currentIndex == index
-                                  ? Colors.blueAccent
+                                  ? Theme.of(context).primaryColor
                                   : Colors.grey.shade300,
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -149,21 +150,10 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               );
                             }
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
                           child: Text(
                             currentIndex == onboardingData.length - 1
                                 ? "Mulai"
                                 : "Lanjut",
-                            style: const TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
                           ),
                         ),
                       ),
