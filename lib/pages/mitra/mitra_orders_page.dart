@@ -215,6 +215,7 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
                         ? Image.network(
                             o.profilePicture!,
                             fit: BoxFit.cover,
+                            headers: const {'ngrok-skip-browser-warning': 'true'},
                             errorBuilder: (context, error, stackTrace) =>
                                 Icon(Icons.person, color: Theme.of(context).primaryColor),
                           )
@@ -361,6 +362,7 @@ class _MitraOrdersPageState extends State<MitraOrdersPage> {
                       ? Image.network(
                           o.profilePicture!,
                           fit: BoxFit.cover,
+                          headers: const {'ngrok-skip-browser-warning': 'true'},
                           errorBuilder: (context, error, stackTrace) =>
                               Icon(Icons.person, color: Theme.of(context).primaryColor),
                         )

@@ -243,6 +243,7 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                     ? Image.network(
                         o.profilePicture!,
                         fit: BoxFit.cover,
+                        headers: const {'ngrok-skip-browser-warning': 'true'},
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.person, color: Colors.blueAccent),
                       )
@@ -410,10 +411,25 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
   }
 
   Widget _cardUpdateStatus(Order o) {
-    // tombol status: accepted, on_the_way, in_progress, completed
+    if (o.status == 'pending' ||
+        o.status == 'rejected' ||
+        o.status == 'cancelled') {
+      return const SizedBox.shrink();
+    }
+
+    final List<Map<String, String>> steps = [
+      {'status': 'accepted', 'label': 'Diterima'},
+      {'status': 'on_the_way', 'label': 'Menuju'},
+      {'status': 'in_progress', 'label': 'Proses'},
+      {'status': 'completed', 'label': 'Selesai'},
+    ];
+
+    int currentIndex = steps.indexWhere((s) => s['status'] == o.status);
+    if (currentIndex == -1) currentIndex = 0;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -429,18 +445,114 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Update Status',
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _statusBtn('Diterima', 'accepted', o),
-              _statusBtn('Menuju Lokasi', 'on_the_way', o),
-              _statusBtn('Dalam Pengerjaan', 'in_progress', o),
-              _statusBtn('Selesai', 'completed', o),
-            ],
-          )
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 20),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(steps.length * 2 - 1, (index) {
+              if (index % 2 == 1) {
+                // Line
+                final stepIndex = index ~/ 2;
+                final isCompletedLine = currentIndex > stepIndex;
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 14),
+                    height: 3,
+                    color: isCompletedLine
+                        ? Colors.blueAccent
+                        : Colors.grey.shade300,
+                  ),
+                );
+              } else {
+                // Circle Node
+                final stepIndex = index ~/ 2;
+                final step = steps[stepIndex];
+                final isCompleted = currentIndex >= stepIndex;
+                final isCurrent = currentIndex == stepIndex;
+                final canTap = _canUpdateStatus(o, step['status']!);
+
+                return GestureDetector(
+                  onTap: canTap ? () => _doUpdateStatus(o, step['status']!) : null,
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isCompleted
+                              ? Colors.blueAccent
+                              : Colors.grey.shade300,
+                          border: isCurrent
+                              ? Border.all(
+                                  color: Colors.blue.shade100, width: 4)
+                              : null,
+                        ),
+                        child: Center(
+                          child: isCompleted
+                              ? const Icon(Icons.check,
+                                  size: 16, color: Colors.white)
+                              : Text('${stepIndex + 1}',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        step['label']!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isCompleted || isCurrent
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isCompleted
+                              ? Colors.blueAccent
+                              : (canTap ? Colors.black87 : Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }),
+          ),
+          const SizedBox(height: 24),
+          if (currentIndex < steps.length - 1 &&
+              _canUpdateStatus(o, steps[currentIndex + 1]['status']!))
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () =>
+                    _doUpdateStatus(o, steps[currentIndex + 1]['status']!),
+                child: Text('Update ke ${steps[currentIndex + 1]['label']}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            )
+          else if (currentIndex < steps.length - 1)
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade300,
+                  foregroundColor: Colors.grey.shade700,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: null,
+                child: const Text('Menunggu Pembayaran',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ),
         ],
       ),
     );
@@ -457,65 +569,31 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
   }
 
   bool _canUpdateStatus(Order o, String targetStatus) {
-    // kalau sudah final -> tidak boleh update apapun
     if (_isFinalStatus(o.status)) return false;
-
-    // kalau target sama dengan status sekarang -> disable
     if (o.status == targetStatus) return false;
 
-    // aturan backend:
-    // - accepted boleh walau belum paid
-    // - on_the_way / in_progress / completed hanya boleh kalau paid
     final paid = _isPaid(o.paymentStatus);
-
     if (targetStatus == 'accepted') return true;
     if (!paid) return false;
 
     return true;
   }
 
-  Widget _statusBtn(String label, String status, Order o) {
+  Future<void> _doUpdateStatus(Order o, String status) async {
     final orderId = int.tryParse(o.bookingId) ?? 0;
-    final enabled = orderId != 0 && _canUpdateStatus(o, status);
+    if (orderId == 0) return;
 
-    return SizedBox(
-      height: 36,
-      child: ElevatedButton(
-        onPressed: !enabled
-            ? null
-            : () async {
-                final prov = context.read<OrderProvider>();
-
-                // ✅ FIX: named arguments
-                final res = await prov.partnerUpdateStatus(
-                  orderId: orderId,
-                  status: status,
-                );
-
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(res.message)),
-                );
-                await prov.loadPartnerOrders();
-              },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.blueAccent,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: Colors.grey.shade300,
-          disabledForegroundColor: Colors.grey.shade700,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: enabled ? Colors.white : Colors.grey.shade700,
-          ),
-        ),
-      ),
+    final prov = context.read<OrderProvider>();
+    final res = await prov.partnerUpdateStatus(
+      orderId: orderId,
+      status: status,
     );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(res.message)),
+    );
+    await prov.loadPartnerOrders();
   }
 
   String _labelStatus(String s) {

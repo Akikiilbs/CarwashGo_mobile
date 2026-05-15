@@ -368,6 +368,7 @@ Widget _bookingCard(
                   ? Image.network(
                       profilePicture,
                       fit: BoxFit.cover,
+                      headers: const {'ngrok-skip-browser-warning': 'true'},
                       errorBuilder: (context, error, stackTrace) =>
                           Icon(Icons.person, color: color),
                     )
