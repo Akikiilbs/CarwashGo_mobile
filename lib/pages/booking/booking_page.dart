@@ -44,7 +44,7 @@ class _BookingPageState extends State<BookingPage> {
   final TextEditingController detailAddressController = TextEditingController();
   final TextEditingController plateNumberController = TextEditingController();
 
-  Map<int, String> _dayMap = {
+  final Map<int, String> _dayMap = {
     DateTime.monday: "Senin",
     DateTime.tuesday: "Selasa",
     DateTime.wednesday: "Rabu",

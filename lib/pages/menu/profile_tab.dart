@@ -474,11 +474,11 @@ class _ProfileTabState extends State<ProfileTab> {
                    Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                        Row(
+                        const Row(
                           children: [
-                            const Icon(Icons.location_on, size: 24, color: Colors.blueAccent),
-                            const SizedBox(width: 12),
-                            const Text("Alamat Utama", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            Icon(Icons.location_on, size: 24, color: Colors.blueAccent),
+                            SizedBox(width: 12),
+                            Text("Alamat Utama", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
                           ]
                         ),
                         TextButton(

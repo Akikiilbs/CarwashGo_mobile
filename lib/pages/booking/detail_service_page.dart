@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/order_provider.dart';
-import '../../core/network/dio_client.dart';
 import '../navigation/bottom_nav.dart';
 
 class DetailServicePage extends StatefulWidget {

@@ -15,7 +15,7 @@ class TrackMitraPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalizedStatus = order.status.toLowerCase();
-    final customerPoint = const LatLng(0.4634, 101.3908);
+    const customerPoint = LatLng(0.4634, 101.3908);
     final partnerPoint = _resolvePartnerPoint(normalizedStatus);
     final statusLabel = _statusLabel(normalizedStatus);
 

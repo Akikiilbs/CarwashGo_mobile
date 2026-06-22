@@ -257,10 +257,10 @@ class _MapPickerPageState extends State<MapPickerPage> {
             child: FloatingActionButton(
               heroTag: "gps_fab",
               backgroundColor: Colors.white,
+              onPressed: _goToMyLocation,
               child: loadingGPS
                   ? const CircularProgressIndicator(color: Colors.blueAccent)
                   : const Icon(Icons.my_location, color: Colors.blueAccent),
-              onPressed: _goToMyLocation,
             ),
           ),
 

@@ -14,18 +14,18 @@ class WalletSummary {
   });
 
   factory WalletSummary.fromJson(Map<String, dynamic> json) {
-    int _toInt(dynamic v) {
+    int toInt(dynamic v) {
       if (v == null) return 0;
       if (v is num) return v.toInt();
       return int.tryParse(v.toString()) ?? 0;
     }
 
     return WalletSummary(
-      availableBalance: _toInt(json['available_balance']),
-      totalNetEarned: _toInt(json['total_net_earned']),
-      totalGross: _toInt(json['total_gross']),
-      totalPlatformFee: _toInt(json['total_platform_fee']),
-      totalWithdrawn: _toInt(json['total_withdrawn']),
+      availableBalance: toInt(json['available_balance']),
+      totalNetEarned: toInt(json['total_net_earned']),
+      totalGross: toInt(json['total_gross']),
+      totalPlatformFee: toInt(json['total_platform_fee']),
+      totalWithdrawn: toInt(json['total_withdrawn']),
     );
   }
 }
@@ -52,13 +52,13 @@ class WalletTransaction {
   });
 
   factory WalletTransaction.fromJson(Map<String, dynamic> json) {
-    int _toInt(dynamic v) {
+    int toInt(dynamic v) {
       if (v == null) return 0;
       if (v is num) return v.toInt();
       return int.tryParse(v.toString()) ?? 0;
     }
 
-    DateTime _toDt(dynamic v) {
+    DateTime toDt(dynamic v) {
       if (v == null) return DateTime.now();
       return DateTime.tryParse(v.toString()) ?? DateTime.now();
     }
@@ -68,8 +68,8 @@ class WalletTransaction {
       type: (json['type'] ?? '').toString(),
       title: (json['title'] ?? '').toString(),
       subtitle: (json['subtitle'] ?? '').toString(),
-      amount: _toInt(json['amount']),
-      createdAt: _toDt(json['created_at']),
+      amount: toInt(json['amount']),
+      createdAt: toDt(json['created_at']),
       status: (json['status'] ?? '').toString(),
       transferProof: json['transfer_proof']?.toString(),
     );

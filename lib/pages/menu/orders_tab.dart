@@ -118,10 +118,10 @@ class _OrdersTabState extends State<OrdersTab> {
     // POPUP REVIEW removed and moved to detail_order_page.dart
 
     if (orders.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
+          children: [
             Icon(Icons.assignment_turned_in, size: 60, color: Colors.grey),
             SizedBox(height: 10),
             Text("Belum ada pesanan", style: TextStyle(color: Colors.grey)),

@@ -21,7 +21,7 @@ class _MapPageState extends State<MapPage> {
       "image": "assets/images/mobil1.png",
       "rating": 5.0,
       "distance": "0.3 km",
-      "location": LatLng(0.5175, 101.4475),
+      "location": const LatLng(0.5175, 101.4475),
       "city": "Tampan, Pekanbaru"
     },
     {
@@ -30,7 +30,7 @@ class _MapPageState extends State<MapPage> {
       "image": "assets/images/on1.png",
       "rating": 5.0,
       "distance": "1.5 km",
-      "location": LatLng(0.5190, 101.4580),
+      "location": const LatLng(0.5190, 101.4580),
       "city": "Tampan, Pekanbaru"
     },
   ];
@@ -50,7 +50,7 @@ class _MapPageState extends State<MapPage> {
             children: [
               TileLayer(
                 urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                subdomains: ['a', 'b', 'c'],
+                subdomains: const ['a', 'b', 'c'],
               ),
               MarkerLayer(
                 markers: [
@@ -81,11 +81,11 @@ class _MapPageState extends State<MapPage> {
                   BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
                 ],
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(Icons.location_on, color: Colors.white),
-                  const SizedBox(width: 10),
-                  const Expanded(
+                  Icon(Icons.location_on, color: Colors.white),
+                  SizedBox(width: 10),
+                  Expanded(
                     child: TextField(
                       decoration: InputDecoration(
                         hintText: "Search Your Location...",
@@ -95,7 +95,7 @@ class _MapPageState extends State<MapPage> {
                       style: TextStyle(color: Colors.white),
                     ),
                   ),
-                  const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                  Icon(Icons.keyboard_arrow_down, color: Colors.white),
                 ],
               ),
             ),
@@ -210,7 +210,7 @@ class _MapPageState extends State<MapPage> {
         ],
       ),
 
-      bottomNavigationBar: BottomNav(currentIndex: 1),
+      bottomNavigationBar: const BottomNav(currentIndex: 1),
     );
   }
 }

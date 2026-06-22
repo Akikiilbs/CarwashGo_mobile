@@ -95,8 +95,8 @@ class _VerifyEmailMitraPageState extends State<VerifyEmailMitraPage> {
             ),
 
             const SizedBox(height: 8),
-            Text("Kode dikirim ke email:",
-                style: const TextStyle(fontSize: 15)),
+            const Text("Kode dikirim ke email:",
+                style: TextStyle(fontSize: 15)),
             Text(widget.email,
                 style: const TextStyle(
                     fontSize: 15, fontWeight: FontWeight.bold)),

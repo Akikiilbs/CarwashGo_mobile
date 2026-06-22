@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../models/notification_model.dart';
-import '../navigation/bottom_nav.dart'; // ✅ perbaikan path
+// ✅ perbaikan path
 
 class NotificationPage extends StatelessWidget {
   final String role;

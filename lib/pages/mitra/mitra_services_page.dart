@@ -174,8 +174,11 @@ class _PartnerInfoSectionState extends State<_PartnerInfoSection> {
                 checkmarkColor: Colors.white,
                 onSelected: (val) {
                   setState(() {
-                    if (val) _selectedDays.add(day);
-                    else _selectedDays.remove(day);
+                    if (val) {
+                      _selectedDays.add(day);
+                    } else {
+                      _selectedDays.remove(day);
+                    }
                   });
                 },
               );
@@ -200,8 +203,11 @@ class _PartnerInfoSectionState extends State<_PartnerInfoSection> {
               return GestureDetector(
                 onTap: () {
                   setState(() {
-                    if (isSelected) _selectedHours.remove(hour);
-                    else _selectedHours.add(hour);
+                    if (isSelected) {
+                      _selectedHours.remove(hour);
+                    } else {
+                      _selectedHours.add(hour);
+                    }
                   });
                 },
                 child: Container(

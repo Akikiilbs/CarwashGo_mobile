@@ -5,10 +5,6 @@ import '../features/auth/data/auth_api.dart';
 import '../providers/user_provider.dart';
 
 // ganti import sesuai nama page kamu:
-import '../pages/onboarding/splash_page.dart';
-import '../pages/auth/role_page.dart';
-import '../pages/home/home_page.dart';
-import '../pages/mitra/home_mitra_page.dart';
 
 class AppGatePage extends StatefulWidget {
   const AppGatePage({super.key});

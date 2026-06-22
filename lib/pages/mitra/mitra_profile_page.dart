@@ -357,6 +357,7 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
     final user = context.watch<UserProvider>();
     final mitra = context.watch<MitraProvider>();
@@ -452,11 +453,11 @@ class _MitraProfilePageState extends State<MitraProfilePage> {
                    Row(
                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                      children: [
-                        Row(
+                        const Row(
                           children: [
-                            const Icon(Icons.location_on, size: 24, color: Colors.blueAccent),
-                            const SizedBox(width: 12),
-                            const Text("Alamat Usaha", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                            Icon(Icons.location_on, size: 24, color: Colors.blueAccent),
+                            SizedBox(width: 12),
+                            Text("Alamat Usaha", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
                           ]
                         ),
                         TextButton(

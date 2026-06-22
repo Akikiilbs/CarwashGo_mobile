@@ -334,8 +334,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     hintText: "Masukkan nomor telepon",
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return "Masukkan nomor telepon";
+                    }
                     if (value.length < 9) return "Nomor tidak valid";
                     return null;
                   },
@@ -382,10 +383,12 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty)
+                    if (value == null || value.trim().isEmpty) {
                       return "Masukkan alamat";
-                    if (value.trim().length < 6)
+                    }
+                    if (value.trim().length < 6) {
                       return "Alamat terlalu singkat";
+                    }
                     return null;
                   },
                 ),
@@ -445,8 +448,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                   validator: (value) {
-                    if (value == null || value.length < 6)
+                    if (value == null || value.length < 6) {
                       return "Minimal 6 karakter";
+                    }
                     return null;
                   },
                 ),
@@ -470,8 +474,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     ),
                   ),
                   validator: (value) {
-                    if (value != _passwordController.text)
+                    if (value != _passwordController.text) {
                       return "Password tidak sama";
+                    }
                     return null;
                   },
                 ),
