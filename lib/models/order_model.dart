@@ -30,6 +30,7 @@ class Order {
   final String notes;
   final String? paymentProof;
   final String? profilePicture;
+  final String? workProof; // URL foto bukti pekerjaan mitra
 
   Order({
     this.mitraId,
@@ -57,6 +58,7 @@ class Order {
     this.notes = '',
     this.paymentProof,
     this.profilePicture,
+    this.workProof,
   });
 
   Order copyWith({
@@ -85,6 +87,7 @@ class Order {
     String? notes,
     String? paymentProof,
     String? profilePicture,
+    String? workProof,
   }) {
     return Order(
       mitraId: mitraId ?? this.mitraId,
@@ -112,6 +115,7 @@ class Order {
       notes: notes ?? this.notes,
       paymentProof: paymentProof ?? this.paymentProof,
       profilePicture: profilePicture ?? this.profilePicture,
+      workProof: workProof ?? this.workProof,
     );
   }
 }

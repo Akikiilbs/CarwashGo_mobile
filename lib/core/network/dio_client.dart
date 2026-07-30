@@ -12,7 +12,7 @@ class DioClient {
     dio = Dio(
       BaseOptions(
         baseUrl:
-            'https://carwashgo.ks-batam.com/api/v1',
+            'https://carwashgo.site/api/v1',
         connectTimeout: const Duration(seconds: 15),
         receiveTimeout: const Duration(seconds: 15),
         headers: {
@@ -32,19 +32,19 @@ class DioClient {
               options.headers['Authorization'] = 'Bearer $token';
             }
 
-            print('➡️ [${options.method}] ${options.uri}');
+            print('[${options.method}] ${options.uri}');
           } catch (e) {
-            print('❌ Token error: $e');
+            print('Token error: $e');
           }
 
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          print('✅ [${response.statusCode}] ${response.requestOptions.uri}');
+          print('[${response.statusCode}] ${response.requestOptions.uri}');
           return handler.next(response);
         },
         onError: (DioException e, handler) {
-          print('❌ [${e.response?.statusCode}] ${e.requestOptions.uri}');
+          print('[${e.response?.statusCode}] ${e.requestOptions.uri}');
           print('Message: ${e.message}');
           return handler.next(e);
         },

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
@@ -24,6 +27,12 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
 
   LatLng? _mitraLatLng;
   bool _loadingMitra = false;
+
+  // ========================
+  // State untuk upload bukti pekerjaan
+  // ========================
+  File? _workProofFile;
+  bool _isUpdatingStatus = false;
 
   LatLng? get _customerLatLng {
     final lat = widget.order.latitude;
@@ -113,6 +122,84 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
     if (v == null) return null;
     if (v is num) return v.toDouble();
     return double.tryParse(v.toString());
+  }
+
+  // =========================
+  // Pilih foto bukti pekerjaan dari galeri / kamera
+  // =========================
+  Future<void> _pickWorkProof(ImageSource source) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 85,
+    );
+    if (picked != null && mounted) {
+      setState(() => _workProofFile = File(picked.path));
+    }
+  }
+
+  void _showPickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Pilih Sumber Foto',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.camera_alt_rounded, color: Colors.blueAccent),
+              ),
+              title: const Text('Ambil Foto (Kamera)'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickWorkProof(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blueAccent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.photo_library_rounded, color: Colors.blueAccent),
+              ),
+              title: const Text('Pilih dari Galeri'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _pickWorkProof(ImageSource.gallery);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -405,6 +492,105 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
               ],
             ),
           ),
+
+          // =========================
+          // CARD BUKTI PEKERJAAN (tampil jika work_proof tersedia)
+          // =========================
+          if (o.workProof != null && o.workProof!.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _cardWorkProofDisplay(o.workProof!),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Card tampilan bukti pekerjaan yang sudah diupload
+  Widget _cardWorkProofDisplay(String workProofUrl) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FFF4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.shade300, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.check_circle_rounded, color: Colors.green.shade700, size: 20),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Bukti Pekerjaan',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF1B5E20),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.network(
+              workProofUrl,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              headers: const {'ngrok-skip-browser-warning': 'true'},
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  height: 200,
+                  color: Colors.grey.shade100,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                      color: Colors.blueAccent,
+                    ),
+                  ),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 120,
+                color: Colors.grey.shade100,
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image_rounded, color: Colors.grey, size: 40),
+                      SizedBox(height: 6),
+                      Text('Gagal memuat gambar', style: TextStyle(color: Colors.grey)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Foto bukti pekerjaan telah diunggah oleh mitra.',
+            style: TextStyle(color: Colors.green.shade700, fontSize: 12),
+          ),
         ],
       ),
     );
@@ -427,6 +613,12 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
     int currentIndex = steps.indexWhere((s) => s['status'] == o.status);
     if (currentIndex == -1) currentIndex = 0;
 
+    // Apakah status berikutnya adalah 'completed'?
+    final nextStatus = currentIndex < steps.length - 1
+        ? steps[currentIndex + 1]['status']!
+        : null;
+    final nextIsCompleted = nextStatus == 'completed';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -447,6 +639,9 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
           const Text('Update Status',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(height: 20),
+          // ========================
+          // STEPPER PROGRESS BAR
+          // ========================
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: List.generate(steps.length * 2 - 1, (index) {
@@ -472,7 +667,7 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                 final canTap = _canUpdateStatus(o, step['status']!);
 
                 return GestureDetector(
-                  onTap: canTap ? () => _doUpdateStatus(o, step['status']!) : null,
+                  onTap: canTap ? () => _handleUpdateStatus(o, step['status']!) : null,
                   child: Column(
                     children: [
                       Container(
@@ -519,11 +714,154 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
             }),
           ),
           const SizedBox(height: 24),
-          if (currentIndex < steps.length - 1 &&
+
+          // ========================
+          // FORM UPLOAD BUKTI PEKERJAAN (hanya muncul jika next = completed)
+          // ========================
+          if (nextIsCompleted && _canUpdateStatus(o, 'completed')) ...[
+            const Divider(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.camera_alt_rounded, color: Colors.orange.shade700, size: 20),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Upload Bukti Pekerjaan',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
+                      Text(
+                        'Wajib diunggah untuk menyelesaikan pesanan',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // Area preview / picker foto
+            GestureDetector(
+              onTap: _isUpdatingStatus ? null : _showPickerOptions,
+              child: Container(
+                width: double.infinity,
+                height: _workProofFile != null ? null : 140,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _workProofFile != null
+                        ? Colors.blueAccent
+                        : Colors.grey.shade300,
+                    width: 1.5,
+                  ),
+                ),
+                child: _workProofFile != null
+                    ? Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(11),
+                            child: Image.file(
+                              _workProofFile!,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          // Tombol ganti foto
+                          Positioned(
+                            top: 8,
+                            right: 8,
+                            child: GestureDetector(
+                              onTap: _isUpdatingStatus ? null : _showPickerOptions,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.edit, color: Colors.white, size: 14),
+                                    SizedBox(width: 4),
+                                    Text('Ganti',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 12)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_a_photo_rounded,
+                              size: 38,
+                              color: Colors.blueAccent.withOpacity(0.5)),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Tap untuk ambil / pilih foto',
+                            style: TextStyle(color: Colors.black54, fontSize: 13),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Format: JPG, PNG • Maks 5MB',
+                            style: TextStyle(
+                                color: Colors.grey.shade400, fontSize: 11),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // ========================
+          // TOMBOL AKSI
+          // ========================
+          if (o.status == 'completed')
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.shade300),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_outline_rounded,
+                      color: Colors.green.shade700),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Pesanan Telah Selesai',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green.shade700),
+                  ),
+                ],
+              ),
+            )
+          else if (currentIndex < steps.length - 1 &&
               _canUpdateStatus(o, steps[currentIndex + 1]['status']!))
             SizedBox(
               width: double.infinity,
-              height: 44,
+              height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent,
@@ -531,16 +869,27 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                onPressed: () =>
-                    _doUpdateStatus(o, steps[currentIndex + 1]['status']!),
-                child: Text('Update ke ${steps[currentIndex + 1]['label']}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: _isUpdatingStatus
+                    ? null
+                    : () => _handleUpdateStatus(
+                        o, steps[currentIndex + 1]['status']!),
+                child: _isUpdatingStatus
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2.5, color: Colors.white),
+                      )
+                    : Text(
+                        'Update ke ${steps[currentIndex + 1]['label']}',
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      ),
               ),
             )
           else if (currentIndex < steps.length - 1)
             SizedBox(
               width: double.infinity,
-              height: 44,
+              height: 48,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade300,
@@ -579,21 +928,79 @@ class _DetailServiceMitraPageState extends State<DetailServiceMitraPage> {
     return true;
   }
 
-  Future<void> _doUpdateStatus(Order o, String status) async {
+  /// Handler utama untuk update status — menginterject form bukti pekerjaan jika diperlukan
+  Future<void> _handleUpdateStatus(Order o, String status) async {
+    // Jika target status adalah 'completed', wajib ada foto bukti pekerjaan
+    if (status == 'completed' && _workProofFile == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Harap upload foto bukti pekerjaan terlebih dahulu sebelum menyelesaikan pesanan.',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
+    await _doUpdateStatus(o, status, workProofFilePath: _workProofFile?.path);
+  }
+
+  Future<void> _doUpdateStatus(Order o, String status,
+      {String? workProofFilePath}) async {
     final orderId = int.tryParse(o.bookingId) ?? 0;
     if (orderId == 0) return;
 
-    final prov = context.read<OrderProvider>();
-    final res = await prov.partnerUpdateStatus(
-      orderId: orderId,
-      status: status,
-    );
+    setState(() => _isUpdatingStatus = true);
 
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(res.message)),
-    );
-    await prov.loadPartnerOrders();
+    try {
+      final prov = context.read<OrderProvider>();
+      final res = await prov.partnerUpdateStatus(
+        orderId: orderId,
+        status: status,
+        workProofFilePath: workProofFilePath,
+      );
+
+      if (!mounted) return;
+
+      if (res.status == 'success' || res.status == 'ok') {
+        // Bersihkan state file setelah berhasil
+        setState(() => _workProofFile = null);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle_rounded, color: Colors.white),
+                SizedBox(width: 10),
+                Text('Status berhasil diperbarui!'),
+              ],
+            ),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res.message)),
+        );
+      }
+
+      await prov.loadPartnerOrders();
+    } finally {
+      if (mounted) setState(() => _isUpdatingStatus = false);
+    }
   }
 
   String _labelStatus(String s) {

@@ -120,9 +120,13 @@ class OrderProvider extends ChangeNotifier {
   Future<SimpleApiResponse> partnerUpdateStatus({
     required int orderId,
     required String status,
+    String? workProofFilePath,
   }) async {
-    final res =
-        await _orderApi.partnerUpdateStatus(orderId: orderId, status: status);
+    final res = await _orderApi.partnerUpdateStatus(
+        orderId: orderId,
+        status: status,
+        workProofFilePath: workProofFilePath,
+    );
     return res;
   }
 
@@ -246,6 +250,7 @@ class OrderProvider extends ChangeNotifier {
       notes: (o['notes'] ?? '').toString(),
       paymentProof: o['payment_proof']?.toString(),
       profilePicture: customer?['profile_photo_url']?.toString(),
+      workProof: o['work_proof_url']?.toString(),
     );
   }
 
@@ -324,6 +329,7 @@ class OrderProvider extends ChangeNotifier {
       notes: (o['notes'] ?? '').toString(),
       paymentProof: o['payment_proof']?.toString(),
       profilePicture: customer?['profile_photo_url']?.toString(),
+      workProof: o['work_proof_url']?.toString(),
     );
   }
 

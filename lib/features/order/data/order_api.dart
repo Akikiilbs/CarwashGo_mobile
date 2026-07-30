@@ -148,11 +148,28 @@ class OrderApi {
   Future<SimpleApiResponse> partnerUpdateStatus({
     required int orderId,
     required String status,
+    String? workProofFilePath, // path file foto bukti pekerjaan (wajib jika status = completed)
   }) async {
     try {
+      dynamic requestData;
+
+      // Jika ada file bukti pekerjaan, kirim sebagai multipart/form-data
+      if (workProofFilePath != null && workProofFilePath.isNotEmpty) {
+        requestData = FormData.fromMap({
+          'status': status,
+          'work_proof': await MultipartFile.fromFile(
+            workProofFilePath,
+            filename: 'work_proof.jpg',
+          ),
+        });
+      } else {
+        // Untuk status lain (on_the_way, in_progress), cukup JSON biasa
+        requestData = {'status': status};
+      }
+
       final res = await _dio.post(
         '/orders/$orderId/status',
-        data: {'status': status},
+        data: requestData,
       );
       return SimpleApiResponse.fromJson(res.data);
     } on DioException catch (e) {
